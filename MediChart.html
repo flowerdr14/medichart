@@ -1,0 +1,1027 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>MediChart</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%22300%2040%201020%201500%22%3E%3Cpath%20fill%3D%22%23808080%22%20fill-rule%3D%22evenodd%22%20d%3D%22M808%2085C600%20370%20340%20760%20340%201025A468%20468%200%200%200%201277%201025C1277%20760%201010%20370%20808%2085ZM808%20258C640%20500%20438%20830%20438%201025A370%20370%200%200%200%201177%201025C1177%20830%20975%20500%20808%20258Z%22%2F%3E%3Cpath%20fill%3D%22%23808080%22%20d%3D%22M741%20897h134v104h104v134H875v105H741V1135H637V1001h104z%22%2F%3E%3C%2Fsvg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: 상단 회색 탭바(응급/외래/수술) + 환자등록. 외래=파란 EMR, 응급=청록+시안 서브탭, 수술=3단 하늘색. 라이트 고정 */
+:root{
+  color-scheme:light;
+  --desk:#cfd8e3; --win:#eef2f7; --white:#ffffff; --line:#9fb0c4; --grid:#d3dce7; --fg:#14202e; --muted:#5a6b7e;
+  --blue:#1c5fae; --blue-dk:#164b8a; --blue-lt:#dbe8f7; --label:#2f6db5; --label-fg:#ffffff; --red:#d02a1b; --alt:#f3f7fb; --sel:#bcd6f3;
+  --st-wait:#f6c744; --st-wait-fg:#4a3500; --st-busy:#d02a1b; --st-busy-fg:#ffffff; --st-done:#2e9d57; --st-done-fg:#ffffff; --st-paid:#8896a6; --st-paid-fg:#ffffff;
+  --gray:#bfbfbf; --gray-dk:#8d8d8d; --gray-lt:#dcdcdc; --teal:#52d6d3; --teal-dk:#1f9e9a; --cyan:#14f5f5; --sky:#4a90d9; --sky-lt:#dce9f6; --sky-dk:#a7c8ea;
+  --font:'Noto Sans KR','Malgun Gothic','Apple SD Gothic Neo',sans-serif; --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--win);color:var(--fg);font:12px/1.4 var(--font);margin:0;padding:0}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--red);outline-offset:1px}
+.window{background:var(--win);min-height:100%;display:flex;flex-direction:column}
+.mod{flex:1;display:flex;flex-direction:column;min-width:0}
+
+/* 상단 탭바 */
+.nav{background:var(--gray);display:flex;align-items:center;gap:6px;padding:6px 12px;flex-wrap:wrap}
+.nav .nt{border:0;background:none;cursor:pointer;font-size:15px;font-weight:500;color:#000;padding:2px 8px}
+.nav .nt[aria-selected="true"]{background:var(--gray-dk)}
+.nav .brand{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:16px;color:#222;margin-right:10px}
+.nav .logo{width:16px;height:24px;color:#4a4a4a}
+.nav .sp{flex:1}
+.nav .clock{color:#333;font-size:11px}
+.nav .reg{border:0;background:none;cursor:pointer;font-size:15px;font-weight:500;color:#000;padding:2px 6px}
+.nav .reg:hover,.nav .nt:hover{text-decoration:underline}
+
+/* 외래 */
+.toolbar{display:flex;flex-wrap:wrap;gap:4px;padding:5px 8px;background:var(--blue-lt);border-bottom:1px solid var(--line);align-items:center}
+.toolbar .sep{width:1px;align-self:stretch;background:var(--line);margin:0 4px}
+.toolbar .note{margin-left:auto;color:var(--muted);font-size:11px}
+.btn{border:1px solid var(--line);background:linear-gradient(#ffffff,#e4ebf3);padding:2px 10px;cursor:pointer;min-height:24px;white-space:nowrap}
+.btn:hover{background:var(--sel)}
+.btn.red{background:linear-gradient(#e5483a,#c0281a);color:#fff;border-color:#9b1d12;font-weight:700}
+.btn.blue{background:linear-gradient(#3b80d0,#1c5fae);color:#fff;border-color:var(--blue-dk);font-weight:700}
+.btn.sm{min-height:22px;padding:1px 8px}
+.app{flex:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:6px;padding:6px;align-items:start}
+.col{display:flex;flex-direction:column;gap:6px;min-width:0}
+.pane{background:var(--white);border:1px solid var(--line);min-width:0}
+.pane>.hd{background:linear-gradient(#2d72c4,#1b5aa8);color:#fff;font-weight:700;padding:3px 8px;display:flex;align-items:center;gap:6px;min-height:26px}
+.pane>.hd .sp{flex:1}.pane>.hd small{font-weight:400}
+.pane>.hd input{width:130px;min-height:20px;padding:0 4px}
+.bd{padding:6px}
+.frm{display:grid;grid-template-columns:70px minmax(0,1fr) 70px minmax(0,1fr);gap:3px;align-items:stretch}
+.lb{background:var(--label);color:var(--label-fg);padding:3px 6px;display:flex;align-items:center;font-size:12px;white-space:nowrap}
+.fld{min-width:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.span3{grid-column:span 3}
+input,select,textarea{background:#fff;border:1px solid var(--line);padding:2px 5px;min-width:0;width:100%;min-height:24px}
+input[type=checkbox],input[type=radio]{width:auto;min-height:0;margin:0}
+.ck{display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
+textarea{resize:vertical;min-height:48px}
+.chart-no{font-family:var(--mono);background:var(--alt)}
+.row-act{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;align-items:center}
+.row-act .info{color:var(--muted);margin-left:auto}
+.hits{display:flex;flex-wrap:wrap;gap:3px;padding:4px 6px 0}
+.hits button{border:1px solid var(--line);background:var(--alt);padding:1px 8px;cursor:pointer}
+.hits button:hover{background:var(--sel)}
+.tabs{display:flex;gap:2px;padding:4px 6px 0;border-bottom:1px solid var(--line);background:var(--win)}
+.tab{border:1px solid var(--line);border-bottom:0;background:var(--grid);padding:2px 14px;cursor:pointer}
+.tab[aria-selected="true"]{background:#fff;font-weight:700;color:var(--blue-dk);position:relative;top:1px}
+.vitals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px 6px;margin-bottom:6px}
+.vitals label,.soap label{display:block;color:var(--muted);font-size:11px}
+.soap{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 6px}
+.hist ul{margin:0;padding:0}.hist li{list-style:none;padding:3px 0;border-bottom:1px dotted var(--line)}
+.hist .d{font-family:var(--mono);color:var(--muted);margin-right:8px}
+.tbl-wrap{overflow:auto;max-height:calc(100vh - 500px);min-height:180px}
+table{border-collapse:collapse;width:100%;min-width:600px}
+th,td{padding:3px 6px;border-bottom:1px solid var(--grid);border-right:1px solid var(--grid);text-align:left;white-space:nowrap}
+th{background:var(--blue-lt);color:var(--blue-dk);font-weight:500;position:sticky;top:0;z-index:1}
+tbody tr{cursor:pointer}
+tbody tr:nth-child(even){background:var(--alt)}
+tbody tr:hover{background:var(--sel)}
+tbody tr.sel{background:var(--sel);outline:1px solid var(--blue);outline-offset:-1px}
+td.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.badge{display:inline-block;min-width:42px;text-align:center;padding:0 6px;font-weight:700;font-size:11px}
+.s-대기{background:var(--st-wait);color:var(--st-wait-fg)}.s-진료중{background:var(--st-busy);color:var(--st-busy-fg)}
+.s-완료{background:var(--st-done);color:var(--st-done-fg)}.s-수납{background:var(--st-paid);color:var(--st-paid-fg)}
+.filters{display:flex;flex-wrap:wrap;gap:3px;padding:4px 6px;border-bottom:1px solid var(--grid)}
+.chip{border:1px solid var(--line);background:linear-gradient(#fff,#e4ebf3);padding:1px 10px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--blue);color:#fff;border-color:var(--blue-dk)}
+.empty{padding:14px;color:var(--muted);text-align:center}
+.two{display:grid;grid-template-columns:minmax(0,250px) minmax(0,1fr);gap:6px;align-items:start}
+.cal-hd{background:var(--blue);color:#fff;display:flex;align-items:center;padding:2px 6px;font-weight:700}
+.cal-hd b{flex:1;text-align:center;font-family:var(--mono);font-weight:500}
+.cal-hd button{border:0;background:none;color:#fff;cursor:pointer;font-size:14px;padding:0 6px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);border-left:1px solid var(--grid);border-top:1px solid var(--grid)}
+.cal div{border-right:1px solid var(--grid);border-bottom:1px solid var(--grid);text-align:center;padding:4px 0;font-family:var(--mono);position:relative;background:#fff}
+.cal .dow{background:var(--blue-lt);font-family:var(--font);font-size:11px}
+.cal .dow:first-child,.cal .d.sun{color:var(--red)}
+.cal .d{cursor:pointer}.cal .d:hover{background:var(--sel)}
+.cal .d.out{color:var(--muted);opacity:.5}
+.cal .d.today{font-weight:700;box-shadow:inset 0 0 0 2px var(--blue)}
+.cal .d.pick{background:var(--blue);color:#fff}
+.cal .d .dot{position:absolute;bottom:2px;left:50%;width:4px;height:4px;margin-left:-2px;background:var(--red)}
+.sched-wrap{overflow:auto;max-height:300px}
+.sched{display:grid;grid-template-columns:54px minmax(0,1fr);min-width:240px;border-left:1px solid var(--grid);border-top:1px solid var(--grid)}
+.sched>div{border-right:1px solid var(--grid);border-bottom:1px solid var(--grid);padding:2px 6px;min-height:23px}
+.sched .ap{grid-column:span 2;background:var(--label);color:#fff;font-weight:700;letter-spacing:.06em;padding:1px 6px}
+.sched .t{font-family:var(--mono);background:var(--blue-lt);color:var(--blue-dk)}
+.sched .free{cursor:pointer;color:transparent}.sched .free:hover{background:var(--sel);color:var(--muted)}
+.sched .bk{background:var(--blue-lt);display:flex;justify-content:space-between;gap:4px;cursor:pointer}
+.sched .bk button{border:0;background:none;cursor:pointer;color:var(--muted);padding:0 2px}
+.statusbar{display:flex;flex-wrap:wrap;gap:12px;padding:3px 10px;background:var(--blue-lt);border-top:1px solid var(--line);color:var(--muted);font-size:11px}
+
+/* 응급 */
+.subnav{background:var(--cyan);display:flex;gap:8px;padding:6px 14px;flex-wrap:wrap}
+.st{border:0;background:none;cursor:pointer;font-size:15px;font-weight:500;color:#000;padding:2px 8px}
+.st[aria-selected="true"]{background:rgba(0,0,0,.2)}
+.er{flex:1;display:grid;grid-template-columns:minmax(260px,30%) minmax(0,1fr);background:#fff}
+.er-left{border-right:2px solid var(--teal);display:flex;flex-direction:column;min-width:0}
+.th{background:var(--teal);color:#000;text-align:center;font-size:15px;padding:5px 8px;font-weight:400;border:0;width:100%}
+.er-hist{flex:1;min-height:240px;display:flex;flex-direction:column;gap:6px;padding:8px}
+.er-find{display:flex;gap:4px}
+.ep{display:block;width:100%;text-align:left;border:1px solid var(--grid);background:#fff;padding:3px 8px;cursor:pointer;margin-bottom:2px}
+.ep[aria-pressed="true"]{background:#c6f1ef;border-color:var(--teal-dk);font-weight:700}
+.tealbtn{border:0;background:var(--teal);color:#000;padding:5px 14px;cursor:pointer;font-size:14px}
+.tealbtn:hover{background:#3fc3c0}
+.tealbtn:disabled{opacity:.5;cursor:default}
+.er-add{margin:auto;text-align:center}
+.er-info{padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+.ir{display:grid;grid-template-columns:64px minmax(0,1fr);align-items:end;gap:6px}
+.ir label{font-size:11px;font-weight:700;color:#222}
+.ul{border:0;border-bottom:1px solid #333;background:transparent;border-radius:0;padding:2px 2px;min-height:22px}
+.ul:disabled{color:#888}
+.er-arrive{display:flex;align-items:center;gap:8px;padding:6px 14px;border-top:2px solid var(--teal);font-size:15px}
+.er-arrive input{border:2px solid #000;padding:3px 6px;min-height:28px}
+.er-main{min-width:0;padding:6px;display:flex;flex-direction:column;gap:6px}
+.er-note{background:#fff7d6;border:1px solid #e3cf7a;padding:6px 10px}
+.er-top{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap}
+.er-top .rowb{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;width:100%}
+.er-main table{min-width:0}
+.er-main th{background:var(--teal);color:#000;font-weight:700;font-size:14px;border:1px solid #333;text-align:center}
+.er-main td{border:1px solid #333}
+.er-main tbody tr{background:#fff}.er-main tbody tr:hover{background:#e3f8f7}
+.labt{min-width:920px}
+.labt th{background:var(--blue-lt);color:var(--blue-dk);font-size:11px;border:1px solid var(--blue);padding:3px}
+.labt td{border:1px solid var(--blue);padding:0;background:#f7fbfe}
+.labt input{border:0;background:transparent;min-height:26px;padding:2px 4px}
+.lab-extra h4{margin:8px 0 2px;font-weight:400;font-size:14px}
+.lab-extra textarea{border:2px solid #000;min-height:150px}
+.tp{border:2px solid var(--teal);background:#fff;min-width:0;display:flex;flex-direction:column}
+.tp .tb{padding:8px 10px}
+.tp textarea{border:0;width:100%;min-height:110px;resize:vertical;padding:6px;flex:1}
+.rec{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:6px}
+.rc-mid,.rc-right{display:flex;flex-direction:column;gap:6px;min-width:0}
+.rc-mid .grow{flex:1}.rc-mid .grow textarea{min-height:260px}
+.exam textarea{min-height:250px}
+.rc-row{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:6px}
+.rc-col{display:flex;flex-direction:column;gap:6px;min-width:0}
+.vs{display:grid;grid-template-columns:34px minmax(0,1fr) 44px;gap:6px 6px;align-items:end}
+.vs label{font-weight:700;font-size:11px}.vs small{font-size:10px}
+.bp{display:flex;gap:4px;align-items:end;grid-column:span 2}
+.gcs{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 8px;align-items:end;font-size:11px}
+.gcs select{border:0;border-bottom:1px solid #333;border-radius:0;min-height:22px;padding:0}
+.gcs .tot{font-weight:700;grid-column:span 2;border-top:1px solid var(--grid);padding-top:4px;display:flex;justify-content:space-between}
+.pain-btns{display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px}
+.pain-btns button{border:0;background:none;cursor:pointer;font-size:16px;padding:2px 8px}
+.pain-btns button:hover{background:#c6f1ef}
+.pain-btns small{color:var(--muted);display:block;font-size:10px;text-align:center}
+.hx{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px 14px}
+.hx>div{display:flex;flex-direction:column;gap:6px}
+.hx .ir{grid-template-columns:50px minmax(0,1fr)}
+.th.btn-th{cursor:pointer}.th.btn-th:hover{background:#3fc3c0}
+
+/* 수술 */
+.op{flex:1;display:grid;grid-template-columns:minmax(300px,0.9fr) minmax(0,1fr) minmax(220px,.55fr);background:#fff}
+.op>section,.op>aside{min-width:0;display:flex;flex-direction:column;border-right:1px solid var(--grid)}
+.oh{background:var(--sky);color:#fff;font-size:15px;padding:7px 12px;font-weight:500}
+.op-f{background:var(--gray-lt);padding:6px;display:flex;flex-direction:column;gap:6px}
+.op-f .r{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.op-f .tag{background:var(--sky-dk);padding:2px 10px;font-size:14px}
+.op-f .r input[type=text],.op-f .r input:not([type]),.op-f .r select,.op-f .r input[type=date]{width:auto;flex:1 1 110px;border:2px solid #000;min-height:26px}
+.op-f .r.rd input[type=date]{flex:0 1 128px;border:1px solid var(--line)}
+.yr{border:1px solid var(--line);background:#fff;padding:2px 8px;cursor:pointer}
+.yr:hover{background:var(--sel)}
+.skybtn{border:0;background:var(--sky);color:#fff;padding:6px 18px;cursor:pointer;font-size:15px;letter-spacing:.2em}
+.skybtn:hover{background:#3a7fc8}
+.skybtn.lt{background:var(--sky-dk)}
+.op-t{width:100%;min-width:0}
+.op-t th{background:var(--sky-lt);color:#000;font-weight:700;border:1px solid #333;font-size:12px;text-align:center}
+.op-t td{border:1px solid var(--grid)}
+.op-list{overflow:auto;flex:1;min-height:200px}
+.opm-top{background:var(--gray-lt);padding:6px 8px;display:flex;flex-direction:column;gap:6px}
+.opm-top .r{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+.ibtn{width:30px;height:30px;border:2px solid #000;background:#fff;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
+.ibtn:hover{background:var(--sel)}
+.opm-top .wd{display:flex;align-items:center;gap:6px}
+.opm-top .wd input{width:150px;border:2px solid #000}
+.opm-body{padding:8px 14px;flex:1;display:flex;flex-direction:column;gap:2px;position:relative}
+.sec{background:var(--sky-lt);font-weight:700;font-size:14px;padding:3px 10px;margin-top:8px}
+.rowf{display:grid;grid-template-columns:76px minmax(0,1fr);gap:6px;align-items:center;padding:2px 0 2px 24px}
+.rowf label{text-align:right;font-size:13px}
+.rowf .ul,.rowf select{border:0;border-bottom:1px solid #333;border-radius:0}
+.rowf textarea{border:1px solid var(--line);min-height:60px}
+.opm-foot{display:flex;justify-content:flex-end}
+.pt-line{color:var(--muted)}
+.vw-hd{display:flex;gap:10px;flex-wrap:wrap;padding:6px 8px;align-items:center}
+.sk-img-t th{background:var(--sky-lt);color:#000;border:1px solid #333;font-size:13px}
+.sk-img-t td{border:1px solid var(--grid)}
+
+/* 팝업 */
+.ov{position:fixed;inset:0;background:rgba(10,20,35,.45);display:flex;align-items:flex-start;justify-content:center;gap:12px;padding:40px 12px;overflow:auto;z-index:30;flex-wrap:wrap}
+.dlg{background:#fff;border:2px solid var(--teal);width:min(560px,100%);max-width:100%}
+.dlg.wide{width:min(620px,100%)}
+.dlg .dh{background:var(--teal);display:flex;justify-content:space-between;align-items:center;padding:4px 10px;font-size:15px}
+.dlg .dh button{border:0;background:none;cursor:pointer;font-size:16px;padding:0 6px}
+.dlg .db{padding:10px;display:flex;flex-direction:column;gap:8px}
+.dlg .db label{font-size:12px;color:var(--muted);display:block;margin-bottom:2px}
+.dlg .acts{display:flex;justify-content:flex-end;gap:6px}
+.dlg .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.dlg img.pv{max-width:100%;display:block;margin:0 auto}
+.nrs{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:2px;align-items:center;text-align:center;font-size:10px;margin:6px 0}
+.nrs .f{grid-row:1;display:flex;justify-content:center}
+.nrs .tr{grid-row:2;grid-column:1/12;height:2px;background:#d6d6d6;align-self:center}
+.nrs .dt{grid-row:2;border:0;width:14px;height:14px;border-radius:50%;background:#c9c9c9;cursor:pointer;justify-self:center;padding:0;position:relative}
+.nrs .dt.on{background:var(--blue);box-shadow:0 0 0 3px rgba(28,95,174,.3)}
+.nrs .nm{grid-row:3;color:var(--muted)}
+.nrs .lbl{grid-row:4;border:1px solid var(--grid);font-size:9px;padding:1px 0;color:var(--muted)}
+.flacc{width:100%;min-width:0;table-layout:fixed}
+.flacc th{background:var(--teal);color:#000;border:1px solid #333;font-size:13px;position:static;text-align:center}
+.flacc td{border:1px solid #333;text-align:center;padding:0}
+.flacc td button{width:100%;border:0;background:#fff;padding:7px 0;cursor:pointer;font-size:15px;font-weight:700}
+.flacc td button:hover{background:#e3f8f7}
+.flacc td button.on{background:var(--blue);color:#fff}
+.toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:#fff;padding:6px 14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50;max-width:90vw}
+.toast.on{opacity:1}
+@media (max-width:1100px){.op{grid-template-columns:minmax(0,1fr)}.op>section,.op>aside{border-right:0;border-bottom:2px solid var(--sky)}}
+@media (max-width:980px){.app{grid-template-columns:minmax(0,1fr)}.er{grid-template-columns:minmax(0,1fr)}.er-left{border-right:0;border-bottom:2px solid var(--teal)}.rec{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:640px){.two{grid-template-columns:minmax(0,1fr)}.frm{grid-template-columns:66px minmax(0,1fr)}.span3{grid-column:span 1}.vitals{grid-template-columns:repeat(2,minmax(0,1fr))}.soap{grid-template-columns:minmax(0,1fr)}.rc-row,.hx,.dlg .grid2{grid-template-columns:minmax(0,1fr)}}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+
+<div class="window">
+  <div class="nav" role="tablist" aria-label="기록 구분">
+    <span class="brand"><svg class="logo" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="300 40 1020 1500"><path fill="currentColor" fill-rule="evenodd" d="M808 85C600 370 340 760 340 1025A468 468 0 0 0 1277 1025C1277 760 1010 370 808 85ZM808 258C640 500 438 830 438 1025A370 370 0 0 0 1177 1025C1177 830 975 500 808 258Z"/><path fill="currentColor" d="M741 897h134v104h104v134H875v105H741V1135H637V1001h104z"/></svg>MediChart</span>
+    <button class="nt" role="tab" data-mod="er" aria-selected="false" type="button">응급기록</button>
+    <button class="nt" role="tab" data-mod="opd" aria-selected="true" type="button">외래기록</button>
+    <button class="nt" role="tab" data-mod="op" aria-selected="false" type="button">수술기록</button>
+    <span class="sp"></span>
+    <span class="clock" id="clock"></span>
+    <button class="reg" id="btn-reg" type="button">+ 환자등록</button>
+  </div>
+
+  <!-- ================= 외래기록 ================= -->
+  <div class="mod" id="mod-opd">
+    <div class="toolbar">
+      <button class="btn" id="btn-new" type="button">신규</button>
+      <button class="btn blue" id="btn-save" type="button">저장</button>
+      <button class="btn" id="btn-del" type="button">삭제</button>
+      <span class="sep"></span>
+      <button class="btn red" id="btn-rx" type="button">접수</button>
+      <button class="btn" id="btn-cancel" type="button">접수취소</button>
+      <span class="sep"></span>
+      <button class="btn" data-st="진료중" type="button">호출(진료중)</button>
+      <button class="btn" data-st="완료" type="button">진료완료</button>
+      <button class="btn" data-st="수납" type="button">수납완료</button>
+      <span class="note" id="del-note"></span>
+    </div>
+    <div class="app">
+      <div class="col">
+        <section class="pane" aria-labelledby="h-pt">
+          <div class="hd"><span id="h-pt">등록정보</span><span class="sp"></span>
+            <input id="q" type="search" placeholder="성명/차트번호" autocomplete="off" aria-label="환자 검색">
+            <button class="btn sm" id="btn-search" type="button">조회</button>
+          </div>
+          <div class="hits" id="hits"></div>
+          <div class="bd">
+            <div class="frm">
+              <div class="lb">차트번호</div><div class="fld"><input id="f-chart" class="chart-no" readonly aria-label="차트번호"></div>
+              <div class="lb">성명</div><div class="fld"><input id="f-name" autocomplete="off" aria-label="성명"></div>
+              <div class="lb">생년월일</div><div class="fld"><input id="f-birth" type="date" aria-label="생년월일"></div>
+              <div class="lb">성별</div><div class="fld"><select id="f-sex" aria-label="성별"><option>여</option><option>남</option></select></div>
+              <div class="lb">휴대폰</div><div class="fld"><input id="f-tel" inputmode="tel" placeholder="010-0000-0000" aria-label="휴대폰"></div>
+              <div class="lb">보험구분</div><div class="fld"><select id="f-ins" aria-label="보험구분"><option>건강보험</option><option>의료급여</option><option>산재</option><option>자동차보험</option><option>일반</option></select></div>
+              <div class="lb">E-mail</div><div class="fld span3"><input id="f-mail" type="email" style="flex:1 1 140px" aria-label="이메일">
+                <label class="ck"><input type="checkbox" id="f-mailok">E-mail 수신</label>
+                <label class="ck"><input type="checkbox" id="f-smsok">SMS 수신</label>
+                <label class="ck"><input type="checkbox" id="f-agree">개인정보동의</label></div>
+              <div class="lb">주소</div><div class="fld span3"><input id="f-addr" aria-label="주소"></div>
+              <div class="lb">알레르기</div><div class="fld"><input id="f-alg" placeholder="예: 페니실린" aria-label="알레르기"></div>
+              <div class="lb">혈액형</div><div class="fld"><select id="f-blood" aria-label="혈액형"></select></div>
+              <div class="lb">비고</div><div class="fld span3"><input id="f-memo" aria-label="비고"></div>
+            </div>
+            <div class="row-act"><span class="info" id="age-info"></span></div>
+          </div>
+        </section>
+
+        <section class="pane" aria-label="진료기록 탭">
+          <div class="tabs" role="tablist">
+            <button class="tab" role="tab" aria-selected="true" data-tab="note" type="button">진료기록</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="hist" type="button">이전내역</button>
+          </div>
+          <div class="bd" id="tab-note">
+            <div style="margin-bottom:4px;color:var(--muted)" id="note-who">접수 현황에서 환자를 선택하세요</div>
+            <div class="vitals">
+              <div><label for="v-bp">혈압(mmHg)</label><input id="v-bp" placeholder="120/80"></div>
+              <div><label for="v-hr">맥박(회/분)</label><input id="v-hr" inputmode="numeric"></div>
+              <div><label for="v-bt">체온(℃)</label><input id="v-bt" inputmode="decimal"></div>
+              <div><label for="v-wt">체중(kg)</label><input id="v-wt" inputmode="decimal"></div>
+            </div>
+            <div class="soap">
+              <div><label for="n-s">S 주관적 소견</label><textarea id="n-s"></textarea></div>
+              <div><label for="n-o">O 객관적 소견</label><textarea id="n-o"></textarea></div>
+              <div><label for="n-a">A 진단(상병)</label><textarea id="n-a"></textarea></div>
+              <div><label for="n-p">P 처방·계획</label><textarea id="n-p"></textarea></div>
+            </div>
+            <div class="row-act"><button class="btn blue" id="btn-note" type="button">기록 저장</button></div>
+          </div>
+          <div class="bd hist" id="tab-hist" hidden><ul id="hist"></ul></div>
+        </section>
+
+        <section class="pane" aria-labelledby="h-rx">
+          <div class="hd"><span id="h-rx">접수정보</span><span class="sp"></span><small id="rx-who">환자를 선택하세요</small></div>
+          <div class="bd">
+            <div class="frm">
+              <div class="lb">접수일</div><div class="fld"><input id="r-date" type="date" aria-label="접수일"></div>
+              <div class="lb">접수구분</div><div class="fld"><select id="r-type" aria-label="접수구분"><option>초진</option><option selected>재진</option><option>예약</option></select></div>
+              <div class="lb">진료과</div><div class="fld"><select id="r-dept" aria-label="진료과"></select></div>
+              <div class="lb">담당의</div><div class="fld"><input id="r-doc" list="doc-list" placeholder="직접 입력" autocomplete="off" aria-label="담당의"><datalist id="doc-list"></datalist></div>
+              <div class="lb">진료유형</div><div class="fld span3">
+                <label class="ck"><input type="checkbox" class="kind" value="일반" checked>일반</label>
+                <label class="ck"><input type="checkbox" class="kind" value="건강검진">건강검진</label>
+                <label class="ck"><input type="checkbox" class="kind" value="예방접종">예방접종</label>
+                <label class="ck"><input type="checkbox" class="kind" value="응급">응급</label></div>
+              <div class="lb">주증상</div><div class="fld span3"><input id="r-memo" placeholder="예: 3일 전부터 기침, 미열" aria-label="주증상"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="col">
+        <section class="pane" aria-labelledby="h-q">
+          <div class="hd"><span id="h-q">접수현황</span><span class="sp"></span><small id="q-date"></small></div>
+          <div class="filters" role="group" aria-label="상태 필터" id="chips"></div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>상태</th><th>순번</th><th>접수</th><th>차트번호</th><th>성명</th><th>성/나이</th><th>진료과</th><th>담당의</th><th>구분</th><th>진료유형</th></tr></thead>
+              <tbody id="queue"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="q-empty" hidden>접수 내역이 없습니다.</div>
+        </section>
+        <div class="two">
+          <section class="pane" aria-label="진료 달력">
+            <div class="cal-hd"><button id="cal-prev" type="button" aria-label="이전 달">◀</button><b id="cal-title"></b><button id="cal-next" type="button" aria-label="다음 달">▶</button></div>
+            <div class="cal" id="cal"></div>
+            <div class="bd"><button class="btn sm" id="cal-today" type="button">오늘</button></div>
+          </section>
+          <section class="pane" aria-labelledby="h-sc">
+            <div class="hd"><span id="h-sc">TODAY OF Schedule</span><span class="sp"></span><small id="sc-date"></small></div>
+            <div class="bd">
+              <div style="color:var(--muted);margin-bottom:4px">환자와 접수정보(진료과·담당의)를 입력하고 빈 시간을 누르면 예약됩니다.</div>
+              <div class="sched-wrap"><div class="sched" id="sched"></div></div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+    <div class="statusbar"><span id="st-total"></span><span id="st-wait"></span><span id="st-busy"></span><span id="st-done"></span></div>
+  </div>
+
+  <!-- ================= 응급기록 ================= -->
+  <div class="mod" id="mod-er" hidden>
+    <div class="subnav" role="tablist" aria-label="응급기록 구분">
+      <button class="st" role="tab" data-er="img" aria-selected="true" type="button">영상검사</button>
+      <button class="st" role="tab" data-er="lab" aria-selected="false" type="button">검사결과</button>
+      <button class="st" role="tab" data-er="rx" aria-selected="false" type="button">처방내역</button>
+      <button class="st" role="tab" data-er="rec" aria-selected="false" type="button">진료기록</button>
+    </div>
+    <div class="er">
+      <aside class="er-left">
+        <div class="th">접수이력</div>
+        <div class="er-hist">
+          <div class="er-find"><input id="er-q" type="search" placeholder="환자 검색(성명/차트번호)" autocomplete="off" aria-label="응급 환자 검색"><button class="btn sm" id="er-find" type="button">검색</button></div>
+          <div class="hits" id="er-hits" style="padding:0"></div>
+          <div id="er-list"></div>
+          <div class="er-add">
+            <button class="tealbtn" id="er-add" type="button">달력추가</button>
+            <div id="er-addrow" hidden style="margin-top:6px;display:flex;gap:4px;justify-content:center"><input id="er-adddate" type="date" aria-label="접수 날짜" style="width:auto"><button class="btn sm" id="er-addok" type="button">추가</button></div>
+          </div>
+        </div>
+        <div class="th">환자정보</div>
+        <div class="er-info">
+          <div class="ir"><label for="er-name">성명</label><input id="er-name" class="ul" readonly></div>
+          <div class="ir"><label for="er-chart">차트번호</label><input id="er-chart" class="ul" readonly></div>
+          <div class="ir"><label for="er-dept">진료과</label><select id="er-dept" class="ul" data-b="dept"></select></div>
+          <div class="ir"><label for="er-blood">혈액형</label><select id="er-blood" class="ul"></select></div>
+          <div class="ir"><label for="er-age">나이</label><input id="er-age" class="ul" readonly></div>
+          <div class="ir"><label>성별</label><span><label class="ck"><input type="radio" name="er-sex" value="남" disabled>남</label> <label class="ck"><input type="radio" name="er-sex" value="여" disabled>여</label></span></div>
+        </div>
+        <div class="er-arrive"><label for="er-arrive">내원방식</label><input id="er-arrive" data-b="arrive" list="arrive-list" autocomplete="off"><datalist id="arrive-list"><option value="119 구급차"><option value="직접 내원"><option value="타병원 전원"><option value="외래 경유"><option value="경찰 이송"></datalist></div>
+      </aside>
+
+      <section class="er-main">
+        <div class="er-note" id="er-note" hidden></div>
+
+        <div id="er-p-img">
+          <div class="er-top"><button class="tealbtn" id="img-add" type="button">추가</button></div>
+          <table style="margin-top:6px"><thead><tr><th style="width:26%">일시</th><th>영상검사명</th><th style="width:24%">이미지 보기</th></tr></thead><tbody id="er-img-body"></tbody></table>
+        </div>
+
+        <div id="er-p-lab" hidden>
+          <div style="overflow:auto"><table class="labt"><thead id="lab-head"></thead><tbody id="lab-body"></tbody></table></div>
+          <div class="lab-extra"><h4>추가 검사결과</h4><textarea data-b="labExtra" aria-label="추가 검사결과"></textarea></div>
+        </div>
+
+        <div id="er-p-rx" hidden>
+          <div class="er-top"><div class="rowb"><button class="tealbtn" data-rx="검사" type="button">검사</button><button class="tealbtn" data-rx="약물" type="button">약물</button><button class="tealbtn" data-rx="처치" type="button">처치</button></div>
+            <div class="rowb"><button class="tealbtn" data-rx="진료" type="button">진료</button><button class="tealbtn" data-rx="협진" type="button">협진</button><button class="tealbtn" data-rx="퇴원" type="button">퇴원</button><button class="tealbtn" data-rx="기타" type="button">기타</button></div></div>
+          <div style="overflow:auto;margin-top:6px"><table style="min-width:640px"><thead><tr><th>No</th><th>종류</th><th>처방일자</th><th>처방자</th><th>내용</th><th>주의사항</th><th>상태</th></tr></thead><tbody id="rx-body"></tbody></table></div>
+        </div>
+
+        <div id="er-p-rec" class="rec" hidden>
+          <div class="rc-mid">
+            <div class="tp"><div class="th">V/S</div><div class="tb vs">
+              <label for="vs-hr">HR</label><input id="vs-hr" class="ul" data-b="vs.hr" inputmode="numeric"><small>bpm</small>
+              <label for="vs-rr">RR</label><input id="vs-rr" class="ul" data-b="vs.rr" inputmode="numeric"><small>회/min</small>
+              <label>BP</label><span class="bp"><input class="ul" data-b="vs.bp1" inputmode="numeric" aria-label="수축기 혈압" style="width:70px"> / <input class="ul" data-b="vs.bp2" inputmode="numeric" aria-label="이완기 혈압" style="width:70px"> <small>mmHg</small></span>
+              <label for="vs-bt">BT</label><input id="vs-bt" data-b="vs.bt" inputmode="decimal" style="border:2px solid #000"><small>℃</small>
+            </div></div>
+            <div class="tp grow"><div class="th">처치/수술기록</div><textarea data-b="proc" aria-label="처치/수술기록"></textarea></div>
+            <div class="tp"><div class="th">최종상태</div><div class="tb" style="display:flex;gap:6px;flex-wrap:wrap"><select data-b="final" style="flex:0 1 140px" aria-label="최종상태"><option value=""></option><option>귀가</option><option>입원</option><option>중환자실</option><option>전원</option><option>사망</option><option>기타</option></select><input data-b="finalNote" style="flex:1 1 140px" aria-label="최종상태 메모" placeholder="메모"></div></div>
+          </div>
+          <div class="rc-right">
+            <div class="tp exam"><div class="th">EXAM</div><textarea data-b="exam" aria-label="EXAM"></textarea></div>
+            <div class="rc-row">
+              <div class="tp"><div class="th">GCS 관리</div><div class="tb gcs" id="gcs"></div></div>
+              <div class="rc-col">
+                <div class="tp"><div class="th">통증평가도구</div><div class="pain-btns"><div><button id="pain-nrs" type="button">NRS</button><small id="pn-nrs"></small></div><div><button id="pain-flacc" type="button">FLACC Scale</button><small id="pn-flacc"></small></div></div></div>
+                <button class="th btn-th" id="er-death" type="button">사망진단서</button>
+              </div>
+            </div>
+            <div class="tp"><div class="th">병력관리</div><div class="tb hx">
+              <div><div class="ir"><label for="hx-psh">PSH</label><input id="hx-psh" class="ul" data-b="hx.psh"></div><div class="ir"><label for="hx-meds">복용약물</label><input id="hx-meds" class="ul" data-b="hx.meds"></div><div class="ir"><label for="hx-alg">알러지</label><input id="hx-alg" class="ul" data-b="hx.alg"></div></div>
+              <div><div class="ir"><label for="hx-hpi">HPI</label><input id="hx-hpi" class="ul" data-b="hx.hpi"></div><div class="ir"><label for="hx-pmh">PMH</label><input id="hx-pmh" class="ul" data-b="hx.pmh"></div></div>
+            </div></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ================= 수술기록 ================= -->
+  <div class="mod" id="mod-op" hidden>
+    <div class="op">
+      <section aria-label="수술예약일자">
+        <div class="oh">수술예약일자</div>
+        <div class="op-f">
+          <div class="r"><span class="tag">검색</span><input id="opf-name" placeholder="환자명" aria-label="환자명"><input id="opf-chart" placeholder="차트번호" aria-label="차트번호"></div>
+          <div class="r rd"><label class="ck"><input type="radio" name="opf-mode" value="today">당일</label><label class="ck"><input type="radio" name="opf-mode" value="recv">접수일</label><label class="ck"><input type="radio" name="opf-mode" value="rep">보고일</label>
+            <input type="date" id="opf-from" aria-label="시작일"><input type="date" id="opf-to" aria-label="종료일"></div>
+          <div class="r"><select id="opf-dept" aria-label="진료과"></select><button class="yr" data-yr="5" type="button">&lt; 5년</button><button class="yr" data-yr="4" type="button">&lt; 4년</button><button class="yr" data-yr="3" type="button">&lt; 3년</button><button class="yr" data-yr="2" type="button">&lt; 2년</button><button class="yr" data-yr="1" type="button">&lt; 1년</button></div>
+          <div class="r">유형 :<label class="ck"><input type="radio" name="opf-sort" value="code">처방코드별</label><label class="ck"><input type="radio" name="opf-sort" value="class">검사분류별</label></div>
+          <div class="r">전체 :<label class="ck"><input type="checkbox" class="opf-sp" value="검체일반">검체일반</label><label class="ck"><input type="checkbox" class="opf-sp" value="검체판독">검체판독</label><label class="ck"><input type="checkbox" class="opf-sp" value="환자검사">환자검사</label>
+            <span style="flex:1"></span><button class="btn sm" id="opf-reset" type="button">초기화</button><button class="skybtn" id="opf-go" type="button">조 회</button></div>
+        </div>
+        <div class="op-list"><table class="op-t"><thead><tr><th>No.</th><th>환자명</th><th>차트번호</th><th>성별</th><th>나이</th><th>집도의</th><th>수술명</th></tr></thead><tbody id="op-body"></tbody></table>
+          <div class="empty" id="op-empty">수술 기록이 없습니다. 환자를 선택하고 오른쪽에서 작성하세요.</div></div>
+      </section>
+
+      <section aria-label="수술기록">
+        <div class="oh" id="op-title">수술기록 과 - 수술명</div>
+        <div class="opm-top">
+          <div class="r"><button class="ibtn" id="op-trash" type="button" aria-label="선택한 기록 삭제" title="삭제"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg></button>
+            <button class="ibtn" id="op-newrec" type="button" aria-label="새 기록" title="새 기록"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h4"/></svg></button>
+            <span class="pt-line" id="op-pt">대상 환자: 선택 안 됨</span></div>
+          <div class="r"><label class="ck"><input type="checkbox" id="op-fav">★ favorite 등록</label><label class="ck"><input type="checkbox" id="op-bm">북마크 등록</label></div>
+          <div class="r" style="justify-content:space-between"><span class="wd"><label for="op-wdate">작성일</label><input id="op-wdate" type="date"></span><button class="skybtn" id="op-save" type="button">작 성</button></div>
+        </div>
+        <div class="opm-body">
+          <div class="sec">수술 기본정보</div>
+          <div class="rowf"><label for="op-date">수술일 :</label><input id="op-date" type="date" class="ul"></div>
+          <div class="rowf"><label for="op-dept">진료과 :</label><select id="op-dept" class="ul"></select></div>
+          <div class="rowf"><label for="op-surgeon">집도의 :</label><input id="op-surgeon" class="ul" autocomplete="off"></div>
+          <div class="rowf"><label for="op-assist">보조의 :</label><input id="op-assist" class="ul" autocomplete="off"></div>
+          <div class="rowf"><label for="op-anes">마취방법 :</label><select id="op-anes" class="ul"><option value=""></option><option>전신마취</option><option>척추마취</option><option>경막외마취</option><option>국소마취</option><option>수면마취</option><option>기타</option></select></div>
+          <div class="rowf"><label for="op-spec">검체구분 :</label><select id="op-spec" class="ul"><option value=""></option><option>검체일반</option><option>검체판독</option><option>환자검사</option></select></div>
+          <div class="sec">수술전 진단명</div>
+          <div class="rowf"><label for="op-pre">진단명:</label><input id="op-pre" class="ul"></div>
+          <div class="sec">수술후 진단명</div>
+          <div class="rowf"><label for="op-post">진단명:</label><input id="op-post" class="ul"></div>
+          <div class="sec">수술명</div>
+          <div class="rowf"><label for="op-name">수술명:</label><input id="op-name" class="ul"></div>
+          <div class="sec">수술중 특이사항</div>
+          <div class="rowf"><label for="op-special">특이사항:</label><textarea id="op-special"></textarea></div>
+          <div class="sec">수술과정</div>
+          <div class="rowf"><label for="op-process">내용:</label><textarea id="op-process"></textarea></div>
+          <div class="opm-foot" style="margin-top:auto;padding-top:10px"><button class="skybtn lt" id="op-del" type="button">삭 제</button></div>
+        </div>
+      </section>
+
+      <aside aria-label="영상검사">
+        <div class="oh">영상검사</div>
+        <div class="vw-hd"><label class="ck"><input type="checkbox" class="opi-k" value="CT">CT</label><label class="ck"><input type="checkbox" class="opi-k" value="MRI">MRI</label><label class="ck"><input type="checkbox" class="opi-k" value="X-Ray">X-Ray</label>
+          <div style="flex:1 1 100%;display:flex;gap:4px;border:2px solid #000;align-items:center;padding:0 6px"><input id="opi-q" style="border:0" placeholder="검사명 검색" aria-label="영상검사 검색"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2a8fbd" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="M15 15l6 6"/></svg></div></div>
+        <table class="sk-img-t" style="min-width:0"><thead><tr><th>검사일</th><th style="width:70px">사진보기</th></tr></thead><tbody id="opi-body"></tbody></table>
+        <div class="empty" id="opi-empty">환자를 선택하면 영상검사가 표시됩니다.</div>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 팝업들 ===== -->
+<div class="ov" id="ov-pt" hidden><div class="dlg wide" id="dlg-pt" role="dialog" aria-label="환자등록">
+  <div class="dh"><span>환자등록</span><button type="button" data-close="dlg-pt" aria-label="닫기">✕</button></div>
+  <div class="db">
+    <div><label for="p-q">기존 환자 검색</label><div style="display:flex;gap:4px"><input id="p-q" type="search" placeholder="성명 또는 차트번호" autocomplete="off"><button class="btn" id="p-find" type="button">검색</button></div><div class="hits" id="p-hits" style="padding:4px 0 0"></div></div>
+    <div class="grid2">
+      <div><label for="p-name">성명 *</label><input id="p-name" autocomplete="off"></div>
+      <div><label for="p-birth">생년월일 *</label><input id="p-birth" type="date"></div>
+      <div><label for="p-sex">성별</label><select id="p-sex"><option>여</option><option>남</option></select></div>
+      <div><label for="p-blood">혈액형</label><select id="p-blood"></select></div>
+      <div><label for="p-tel">휴대폰</label><input id="p-tel" inputmode="tel" placeholder="010-0000-0000"></div>
+      <div><label for="p-ins">보험구분</label><select id="p-ins"><option>건강보험</option><option>의료급여</option><option>산재</option><option>자동차보험</option><option>일반</option></select></div>
+    </div>
+    <div class="acts"><button class="btn" data-close="dlg-pt" type="button">닫기</button><button class="btn blue" id="p-ok" type="button">등록</button></div>
+  </div></div></div>
+
+<div class="ov" id="ov-img" hidden><div class="dlg" id="dlg-img" role="dialog" aria-label="영상검사 추가">
+  <div class="dh"><span>영상검사 추가</span><button type="button" data-close="dlg-img" aria-label="닫기">✕</button></div>
+  <div class="db">
+    <div class="grid2"><div><label for="i-kind">종류</label><select id="i-kind"><option>X-Ray</option><option>CT</option><option>MRI</option><option>초음파</option><option>기타</option></select></div>
+      <div><label for="i-dt">일시</label><input id="i-dt" type="datetime-local"></div></div>
+    <div><label for="i-name">영상검사명</label><input id="i-name" placeholder="예: Chest PA"></div>
+    <div><label for="i-file">이미지 파일(선택)</label><input id="i-file" type="file" accept="image/*"></div>
+    <div class="acts"><button class="btn" data-close="dlg-img" type="button">취소</button><button class="btn blue" id="i-ok" type="button">추가</button></div>
+  </div></div></div>
+
+<div class="ov" id="ov-view" hidden><div class="dlg wide" id="dlg-view" role="dialog" aria-label="이미지 보기">
+  <div class="dh"><span id="v-title">이미지 보기</span><button type="button" data-close="dlg-view" aria-label="닫기">✕</button></div>
+  <div class="db" id="v-body"></div></div></div>
+
+<div class="ov" id="ov-rx" hidden><div class="dlg" id="dlg-rx" role="dialog" aria-label="처방 추가">
+  <div class="dh"><span id="rx-title">처방 추가</span><button type="button" data-close="dlg-rx" aria-label="닫기">✕</button></div>
+  <div class="db">
+    <div><label for="x-by">처방자</label><input id="x-by" list="doc-list" autocomplete="off"></div>
+    <div><label for="x-content">내용</label><textarea id="x-content"></textarea></div>
+    <div><label for="x-caution">주의사항</label><input id="x-caution"></div>
+    <div class="acts"><button class="btn" data-close="dlg-rx" type="button">취소</button><button class="btn blue" id="x-ok" type="button">처방</button></div>
+  </div></div></div>
+
+<div class="ov" id="ov-death" hidden><div class="dlg wide" id="dlg-death" role="dialog" aria-label="사망진단서">
+  <div class="dh"><span>사망진단서</span><button type="button" data-close="dlg-death" aria-label="닫기">✕</button></div>
+  <div class="db">
+    <div style="color:var(--muted)">연습용 서식입니다. 법적 효력이 없습니다.</div>
+    <div class="grid2"><div><label for="d-dt">사망일시</label><input id="d-dt" type="datetime-local"></div>
+      <div><label for="d-kind">사망의 종류</label><select id="d-kind"><option value=""></option><option>병사</option><option>외인사</option><option>기타 및 불상</option></select></div></div>
+    <div><label for="d-c1">(가) 직접 사인</label><input id="d-c1"></div>
+    <div><label for="d-c2">(나) (가)의 원인</label><input id="d-c2"></div>
+    <div><label for="d-c3">(다) (나)의 원인</label><input id="d-c3"></div>
+    <div class="grid2"><div><label for="d-by">작성의</label><input id="d-by" list="doc-list" autocomplete="off"></div><div><label for="d-memo">비고</label><input id="d-memo"></div></div>
+    <div class="acts"><button class="btn" id="d-clear" type="button">서식 삭제</button><button class="btn" data-close="dlg-death" type="button">닫기</button><button class="btn blue" id="d-ok" type="button">저장</button></div>
+  </div></div></div>
+
+<div class="ov" id="ov-pain" hidden>
+  <div class="dlg" id="win-nrs" hidden role="dialog" aria-label="NRS 평가도구">
+    <div class="dh"><span>NRS 평가도구</span><button type="button" data-close="win-nrs" aria-label="닫기">✕</button></div>
+    <div class="db"><div style="text-align:center;font-weight:700;font-size:11px">NRS · PAIN SCORE 0-10 NUMERICAL RATING</div>
+      <div class="nrs" id="nrs-scale"></div>
+      <div id="nrs-val" style="text-align:center">점수를 선택하세요</div>
+      <div><label for="nrs-note">추가 평가기록</label><textarea id="nrs-note" style="border:2px solid #000;min-height:90px"></textarea></div>
+      <div class="acts"><button class="btn blue" id="nrs-ok" type="button">저장</button></div></div></div>
+  <div class="dlg" id="win-flacc" hidden role="dialog" aria-label="FLACC Scale">
+    <div class="dh"><span>FLACC Scale</span><button type="button" data-close="win-flacc" aria-label="닫기">✕</button></div>
+    <div class="db"><table class="flacc" id="flacc-t" style="min-width:0"></table>
+      <div id="flacc-val" style="text-align:center">항목별 점수를 선택하세요</div>
+      <div><label for="flacc-note">추가 평가기록</label><textarea id="flacc-note" style="border:2px solid #000;min-height:90px"></textarea></div>
+      <div class="acts"><button class="btn blue" id="flacc-ok" type="button">저장</button></div></div></div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  var DEPTS=['가정의학과','내과','신경과','정신건강의학과','외과','정형외과','신경외과','흉부외과','성형외과','마취통증의학과','산부인과','소아청소년과','안과','이비인후과','피부과','비뇨의학과','영상의학과','방사선종양학과','병리과','진단검사의학과','결핵과','재활의학과','핵의학과','직업환경의학과','예방의학과','응급의학과','치과'];
+  var BLOODS=['','A+','A-','B+','B-','O+','O-','AB+','AB-'];
+  var TIMES=[];for(var h=9;h<18;h++){TIMES.push(p2(h)+':00');TIMES.push(p2(h)+':30')}
+  function p2(n){return String(n).padStart(2,'0')}
+  function ymd(d){return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())}
+  function nowStr(){var n=new Date();return ymd(n)+' '+p2(n.getHours())+':'+p2(n.getMinutes())}
+  function nowLocal(){var n=new Date();return ymd(n)+'T'+p2(n.getHours())+':'+p2(n.getMinutes())}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function $(id){return document.getElementById(id)}
+  function fillSel(sel,arr,blank){sel.innerHTML='';arr.forEach(function(d){var o=document.createElement('option');o.value=d;o.textContent=d;sel.appendChild(o)})}
+  var today=new Date(),TODAY=ymd(today);
+
+  var S={patients:[],visits:[],appts:[],notes:{},nextVisit:1,er:[],surg:[],imaging:[],nextId:1};
+  try{var raw=localStorage.getItem('emr-outpatient-v2');if(raw){var o=JSON.parse(raw);if(o&&o.patients){S=o}}}catch(e){}
+  ['patients','visits','appts','er','surg','imaging'].forEach(function(k){if(!S[k])S[k]=[]});if(!S.notes)S.notes={};if(!S.nextVisit)S.nextVisit=1;if(!S.nextId)S.nextId=1;
+  function persist(){try{localStorage.setItem('emr-outpatient-v2',JSON.stringify(S));return true}catch(e){return false}}
+  var pTimer=null;function persistSoon(){clearTimeout(pTimer);pTimer=setTimeout(persist,300)}
+
+  var cur=null,curVisit=null,pickDate=TODAY,calY=today.getFullYear(),calM=today.getMonth(),filter='전체',delArm=false;
+  function pt(c){return S.patients.filter(function(p){return p.chart===c})[0]}
+  function age(b){if(!b)return '';var d=new Date(b),a=today.getFullYear()-d.getFullYear(),m=today.getMonth()-d.getMonth();if(m<0||(m===0&&today.getDate()<d.getDate()))a--;return a}
+  function toast(t){var el=$('toast');el.textContent=t;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(function(){el.classList.remove('on')},2000)}
+
+  /* ---------- 공통: 팝업 ---------- */
+  function showDlg(id){var d=$(id);d.hidden=false;d.parentNode.hidden=false}
+  function hideDlg(id){var d=$(id);d.hidden=true;var p=d.parentNode,any=false;Array.prototype.forEach.call(p.children,function(c){if(!c.hidden)any=true});if(!any)p.hidden=true}
+  document.querySelectorAll('[data-close]').forEach(function(b){b.onclick=function(){hideDlg(b.getAttribute('data-close'))}});
+  document.querySelectorAll('.ov').forEach(function(ov){ov.addEventListener('mousedown',function(e){if(e.target===ov){Array.prototype.forEach.call(ov.children,function(c){c.hidden=true});ov.hidden=true}})});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')document.querySelectorAll('.ov').forEach(function(ov){if(!ov.hidden){Array.prototype.forEach.call(ov.children,function(c){c.hidden=true});ov.hidden=true}})});
+
+  /* ---------- 공통: 환자 선택/검색 ---------- */
+  function hitsFor(q,box,cb){
+    box.innerHTML='';q=q.trim();if(!q)return;
+    var r=S.patients.filter(function(p){return p.name.indexOf(q)>-1||p.chart.indexOf(q)>-1}).slice(0,10);
+    if(!r.length){box.innerHTML='<span style="color:var(--muted)">검색 결과가 없습니다. 상단의 + 환자등록으로 등록하세요.</span>';return}
+    r.forEach(function(p){var b=document.createElement('button');b.type='button';b.textContent=p.name+' · '+p.chart+' · '+p.sex+'/'+age(p.birth);b.onclick=function(){cb(p);box.innerHTML=''};box.appendChild(b)});
+  }
+  function nextChart(){var m=0;S.patients.forEach(function(p){m=Math.max(m,parseInt(p.chart.slice(-4),10)||0)});return today.getFullYear()+String(m+1).padStart(4,'0')}
+  function afterPatient(){renderErAll();renderOpHead();renderOpImg();renderOpList()}
+
+  /* ---------- 모듈 전환 ---------- */
+  var mod='opd';
+  function showMod(m){
+    mod=m;['er','opd','op'].forEach(function(k){$('mod-'+k).hidden=k!==m});
+    document.querySelectorAll('.nt').forEach(function(b){b.setAttribute('aria-selected',String(b.getAttribute('data-mod')===m))});
+    if(m==='er')renderErAll();if(m==='op'){renderOpList();renderOpHead();renderOpImg()}
+  }
+  document.querySelectorAll('.nt').forEach(function(b){b.onclick=function(){showMod(b.getAttribute('data-mod'))}});
+
+  /* ---------- 환자등록 ---------- */
+  fillSel($('p-blood'),BLOODS);fillSel($('f-blood'),BLOODS);fillSel($('er-blood'),BLOODS);
+  $('btn-reg').onclick=function(){$('p-name').value='';$('p-birth').value='';$('p-tel').value='';$('p-sex').value='여';$('p-blood').value='';$('p-ins').value='건강보험';$('p-q').value='';$('p-hits').innerHTML='';showDlg('dlg-pt');$('p-name').focus()};
+  $('p-find').onclick=function(){hitsFor($('p-q').value,$('p-hits'),function(p){hideDlg('dlg-pt');pickPatient(p.chart);toast(p.name+' 선택')})};
+  $('p-q').addEventListener('keydown',function(e){if(e.key==='Enter')$('p-find').onclick()});
+  $('p-ok').onclick=function(){
+    var name=$('p-name').value.trim();if(!name){toast('성명을 입력하세요');$('p-name').focus();return}
+    if(!$('p-birth').value){toast('생년월일을 입력하세요');$('p-birth').focus();return}
+    var p={chart:nextChart(),name:name,birth:$('p-birth').value,sex:$('p-sex').value,tel:$('p-tel').value.trim(),ins:$('p-ins').value,mail:'',mailok:false,smsok:false,agree:false,addr:'',alg:'',memo:'',blood:$('p-blood').value};
+    S.patients.push(p);persist();hideDlg('dlg-pt');pickPatient(p.chart);
+    if(mod==='er'){addEpisode(TODAY,true)}
+    toast('신규 등록: '+p.chart);
+  };
+  function pickPatient(c){curVisit=null;disarm();setPatient(c);renderQueue();loadNote()}
+
+  /* ---------- 외래: 환자 ---------- */
+  function fillForm(p){
+    $('f-chart').value=p?p.chart:'(저장 시 자동 부여)';
+    $('f-name').value=p?p.name:'';$('f-birth').value=p?p.birth:'';$('f-sex').value=p?p.sex:'여';
+    $('f-tel').value=p?p.tel:'';$('f-ins').value=p?p.ins:'건강보험';$('f-mail').value=p?p.mail||'':'';
+    $('f-mailok').checked=!!(p&&p.mailok);$('f-smsok').checked=!!(p&&p.smsok);$('f-agree').checked=!!(p&&p.agree);
+    $('f-addr').value=p?p.addr:'';$('f-alg').value=p?p.alg:'';$('f-memo').value=p?p.memo:'';$('f-blood').value=p?p.blood||'':'';
+    $('age-info').textContent=p?('만 '+age(p.birth)+'세'):'';
+    $('rx-who').textContent=p?(p.name+' · '+p.chart):'환자를 선택하세요';
+  }
+  function setPatient(c){cur=c?pt(c):null;fillForm(cur);renderHist();afterPatient()}
+  function disarm(){delArm=false;$('del-note').textContent='';$('btn-del').textContent='삭제'}
+  $('btn-new').onclick=function(){cur=null;curVisit=null;disarm();fillForm(null);renderHist();renderQueue();loadNote();afterPatient();$('f-name').focus()};
+  $('btn-save').onclick=function(){
+    var name=$('f-name').value.trim();if(!name){toast('성명을 입력하세요');$('f-name').focus();return}
+    if(!$('f-birth').value){toast('생년월일을 입력하세요');$('f-birth').focus();return}
+    var data={name:name,birth:$('f-birth').value,sex:$('f-sex').value,tel:$('f-tel').value.trim(),ins:$('f-ins').value,mail:$('f-mail').value.trim(),mailok:$('f-mailok').checked,smsok:$('f-smsok').checked,agree:$('f-agree').checked,addr:$('f-addr').value.trim(),alg:$('f-alg').value.trim(),memo:$('f-memo').value.trim(),blood:$('f-blood').value};
+    if(cur){Object.assign(cur,data);toast('환자 정보를 수정했습니다')}
+    else{cur=Object.assign({chart:nextChart()},data);S.patients.push(cur);toast('신규 등록: '+cur.chart)}
+    persist();fillForm(cur);renderQueue();renderSched();afterPatient();
+  };
+  $('btn-del').onclick=function(){
+    if(!cur){toast('삭제할 환자를 선택하세요');return}
+    if(!delArm){delArm=true;$('btn-del').textContent='한 번 더 누르면 삭제';$('del-note').textContent=cur.name+' 환자와 접수·예약·기록이 모두 삭제됩니다';return}
+    var c=cur.chart,ids=S.visits.filter(function(v){return v.chart===c}).map(function(v){return v.id});
+    S.patients=S.patients.filter(function(p){return p.chart!==c});S.visits=S.visits.filter(function(v){return v.chart!==c});S.appts=S.appts.filter(function(a){return a.chart!==c});
+    S.er=S.er.filter(function(e){return e.chart!==c});S.surg=S.surg.filter(function(s){return s.chart!==c});S.imaging=S.imaging.filter(function(i){return i.chart!==c});
+    ids.forEach(function(i){delete S.notes[i]});
+    cur=null;curVisit=null;erCur=null;opSel=null;disarm();persist();fillForm(null);renderAll();renderHist();loadNote();afterPatient();toast('환자를 삭제했습니다');
+  };
+  $('btn-search').onclick=function(){hitsFor($('q').value,$('hits'),function(p){pickPatient(p.chart)})};
+  $('q').addEventListener('keydown',function(e){if(e.key==='Enter')$('btn-search').onclick()});
+
+  /* ---------- 외래: 접수 ---------- */
+  fillSel($('r-dept'),DEPTS);$('r-dept').value='내과';$('r-date').value=TODAY;
+  function docList(){var s={};S.visits.forEach(function(v){if(v.doc)s[v.doc]=1});S.appts.forEach(function(a){if(a.doc)s[a.doc]=1});S.surg.forEach(function(x){if(x.surgeon)s[x.surgeon]=1});S.er.forEach(function(e){(e.rx||[]).forEach(function(r){if(r.by)s[r.by]=1})});$('doc-list').innerHTML=Object.keys(s).map(function(n){return '<option value="'+esc(n)+'">'}).join('')}
+  function kinds(){return Array.prototype.slice.call(document.querySelectorAll('.kind:checked')).map(function(c){return c.value}).join(', ')||'일반'}
+  $('btn-rx').onclick=function(){
+    if(!cur){toast('먼저 환자를 검색하거나 저장하세요');return}
+    var doc=$('r-doc').value.trim();if(!doc){toast('담당의를 입력하세요');$('r-doc').focus();return}
+    var date=$('r-date').value||TODAY,dept=$('r-dept').value;
+    if(S.visits.some(function(v){return v.chart===cur.chart&&v.date===date&&v.dept===dept&&v.status!=='수납'})){toast('같은 진료과에 이미 접수되어 있습니다');return}
+    var n=new Date(),v={id:S.nextVisit++,date:date,time:p2(n.getHours())+':'+p2(n.getMinutes()),chart:cur.chart,dept:dept,doc:doc,type:$('r-type').value,kind:kinds(),memo:$('r-memo').value.trim(),status:'대기'};
+    S.visits.push(v);curVisit=v;pickDate=date;var d=new Date(date);calY=d.getFullYear();calM=d.getMonth();$('r-memo').value='';
+    persist();renderAll();loadNote();toast(cur.name+' 접수 완료');
+  };
+
+  /* ---------- 외래: 접수 현황 ---------- */
+  var STAT=['전체','대기','진료중','완료','수납'];
+  function dayVisits(){return S.visits.filter(function(v){return v.date===pickDate})}
+  function renderChips(){
+    var c=$('chips');c.innerHTML='';
+    STAT.forEach(function(s){var b=document.createElement('button');b.type='button';b.className='chip';b.setAttribute('aria-pressed',String(filter===s));
+      var n=dayVisits().filter(function(v){return s==='전체'||v.status===s}).length;b.textContent=s+' '+n;b.onclick=function(){filter=s;renderChips();renderQueue()};c.appendChild(b)});
+    var dv=dayVisits();$('st-total').textContent='전체 '+dv.length;
+    ['대기','진료중','완료'].forEach(function(s,i){$(['st-wait','st-busy','st-done'][i]).textContent=s+' '+dv.filter(function(v){return v.status===s}).length});
+  }
+  function renderQueue(){
+    var rows=dayVisits().filter(function(v){return filter==='전체'||v.status===filter}).sort(function(a,b){return a.time<b.time?-1:a.time>b.time?1:a.id-b.id});
+    var tb=$('queue');tb.innerHTML='';
+    rows.forEach(function(v,i){
+      var p=pt(v.chart)||{name:'?',sex:'',birth:''},tr=document.createElement('tr');tr.tabIndex=0;if(curVisit&&curVisit.id===v.id)tr.className='sel';
+      tr.innerHTML='<td><span class="badge s-'+v.status+'">'+v.status+'</span></td><td class="num">'+(i+1)+'</td><td class="num">'+v.time+'</td><td class="num">'+v.chart+'</td><td>'+esc(p.name)+'</td><td>'+p.sex+'/'+age(p.birth)+'</td><td>'+esc(v.dept)+'</td><td>'+esc(v.doc)+'</td><td>'+v.type+'</td><td>'+esc(v.kind||'일반')+'</td>';
+      var pick=function(){curVisit=v;disarm();setPatient(v.chart);renderQueue();loadNote()};
+      tr.onclick=pick;tr.onkeydown=function(e){if(e.key==='Enter')pick()};tb.appendChild(tr);
+    });
+    $('q-empty').hidden=rows.length>0;$('q-date').textContent=pickDate+(pickDate===TODAY?' (오늘)':'');
+    docList();
+  }
+  document.querySelectorAll('[data-st]').forEach(function(b){b.onclick=function(){
+    if(!curVisit){toast('접수현황에서 환자를 선택하세요');return}
+    curVisit.status=b.getAttribute('data-st');persist();renderChips();renderQueue();toast(pt(curVisit.chart).name+' → '+curVisit.status)}});
+  $('btn-cancel').onclick=function(){
+    if(!curVisit){toast('접수현황에서 환자를 선택하세요');return}
+    var id=curVisit.id;S.visits=S.visits.filter(function(v){return v.id!==id});delete S.notes[id];curVisit=null;persist();renderAll();loadNote();toast('접수를 취소했습니다')};
+
+  document.querySelectorAll('.tab').forEach(function(t){t.onclick=function(){
+    document.querySelectorAll('.tab').forEach(function(x){x.setAttribute('aria-selected',String(x===t))});
+    $('tab-note').hidden=t.getAttribute('data-tab')!=='note';$('tab-hist').hidden=t.getAttribute('data-tab')!=='hist'}});
+  function loadNote(){
+    var n=curVisit&&S.notes[curVisit.id]||{};
+    ['bp','hr','bt','wt'].forEach(function(k){$('v-'+k).value=n[k]||''});
+    ['s','o','a','p'].forEach(function(k){$('n-'+k).value=n[k]||''});
+    $('note-who').textContent=curVisit?(pt(curVisit.chart).name+' · '+curVisit.date+' '+curVisit.dept+' · '+curVisit.doc):'접수현황에서 환자를 선택하세요';
+  }
+  $('btn-note').onclick=function(){
+    if(!curVisit){toast('접수현황에서 환자를 선택하세요');return}
+    var n={};['bp','hr','bt','wt'].forEach(function(k){n[k]=$('v-'+k).value.trim()});['s','o','a','p'].forEach(function(k){n[k]=$('n-'+k).value.trim()});
+    S.notes[curVisit.id]=n;persist();renderHist();toast('진료 기록을 저장했습니다')};
+  function renderHist(){
+    var ul=$('hist');ul.innerHTML='';
+    if(!cur){ul.innerHTML='<li style="color:var(--muted)">환자를 선택하면 표시됩니다.</li>';return}
+    var vs=S.visits.filter(function(v){return v.chart===cur.chart&&S.notes[v.id]}).sort(function(a,b){return a.date<b.date?1:-1});
+    if(!vs.length){ul.innerHTML='<li style="color:var(--muted)">저장된 진료 기록이 없습니다.</li>';return}
+    vs.forEach(function(v){var n=S.notes[v.id],li=document.createElement('li');li.innerHTML='<span class="d">'+v.date+'</span>'+esc(v.dept)+' · '+esc(v.doc)+' · '+esc(n.a||'진단 미입력')+(n.p?' · '+esc(n.p):'');ul.appendChild(li)});
+  }
+
+  function renderCal(){
+    var c=$('cal');c.innerHTML='';['일','월','화','수','목','금','토'].forEach(function(d){var e=document.createElement('div');e.className='dow';e.textContent=d;c.appendChild(e)});
+    $('cal-title').textContent=calY+' '+p2(calM+1);
+    var start=new Date(calY,calM,1-new Date(calY,calM,1).getDay());
+    for(var i=0;i<42;i++){
+      var d=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i),k=ymd(d),e=document.createElement('div');
+      e.className='d'+(d.getMonth()!==calM?' out':'')+(d.getDay()===0?' sun':'')+(k===TODAY?' today':'')+(k===pickDate?' pick':'');
+      e.textContent=p2(d.getDate());e.tabIndex=0;
+      if(S.visits.some(function(v){return v.date===k})||S.appts.some(function(a){return a.date===k})){var dot=document.createElement('span');dot.className='dot';e.appendChild(dot)}
+      (function(k,d){var go=function(){pickDate=k;calY=d.getFullYear();calM=d.getMonth();$('r-date').value=k;curVisit=null;renderAll();loadNote()};e.onclick=go;e.onkeydown=function(ev){if(ev.key==='Enter')go()}})(k,d);
+      c.appendChild(e);
+    }
+  }
+  $('cal-prev').onclick=function(){calM--;if(calM<0){calM=11;calY--}renderCal()};
+  $('cal-next').onclick=function(){calM++;if(calM>11){calM=0;calY++}renderCal()};
+  $('cal-today').onclick=function(){pickDate=TODAY;calY=today.getFullYear();calM=today.getMonth();$('r-date').value=TODAY;curVisit=null;renderAll();loadNote()};
+
+  function renderSched(){
+    var g=$('sched');g.innerHTML='';
+    function ap(t){var e=document.createElement('div');e.className='ap';e.textContent=t;g.appendChild(e)}
+    TIMES.forEach(function(t){
+      if(t==='09:00')ap('AM');if(t==='12:00')ap('PM');
+      var t0=document.createElement('div');t0.className='t';t0.textContent=t;g.appendChild(t0);
+      var a=S.appts.filter(function(x){return x.date===pickDate&&x.time===t})[0],cell=document.createElement('div');
+      if(a){var p=pt(a.chart);cell.className='bk';cell.innerHTML='<span>'+esc(p?p.name:'?')+' · '+esc(a.dept)+' · '+esc(a.doc)+'</span>';
+        var x=document.createElement('button');x.type='button';x.setAttribute('aria-label','예약 취소');x.textContent='×';
+        x.onclick=function(ev){ev.stopPropagation();S.appts=S.appts.filter(function(y){return y!==a});persist();renderCal();renderSched();toast('예약을 취소했습니다')};cell.appendChild(x);
+        cell.onclick=function(){curVisit=null;disarm();setPatient(a.chart);renderQueue();loadNote()};
+      }else{cell.className='free';cell.setAttribute('role','button');cell.tabIndex=0;cell.textContent='예약하기';
+        var book=function(){
+          if(!cur){toast('먼저 환자를 선택하세요');return}
+          var doc=$('r-doc').value.trim();if(!doc){toast('접수정보의 담당의를 입력하세요');$('r-doc').focus();return}
+          S.appts.push({date:pickDate,time:t,doc:doc,dept:$('r-dept').value,chart:cur.chart});persist();renderCal();renderSched();docList();toast(cur.name+' '+t+' 예약')};
+        cell.onclick=book;cell.onkeydown=function(e){if(e.key==='Enter')book()}}
+      g.appendChild(cell);
+    });
+    $('sc-date').textContent=pickDate;
+  }
+  function renderAll(){renderChips();renderQueue();renderCal();renderSched()}
+
+  /* =================== 응급기록 =================== */
+  var erCur=null,erTab='img';
+  fillSel($('er-dept'),DEPTS);
+  function epsOf(){return cur?S.er.filter(function(e){return e.chart===cur.chart}).sort(function(a,b){return (a.date+a.time)<(b.date+b.time)?1:-1}):[]}
+  function newEp(date){var n=new Date(),labs=[];for(var i=0;i<10;i++)labs.push({});
+    return {id:S.nextId++,chart:cur.chart,date:date,time:p2(n.getHours())+':'+p2(n.getMinutes()),arrive:'',dept:'응급의학과',labs:labs,labExtra:'',rx:[],vs:{},proc:'',final:'',finalNote:'',exam:'',gcs:{},hx:{alg:cur.alg||''},pain:[],death:null}}
+  function addEpisode(date,silent){
+    if(!cur){toast('먼저 환자를 선택하세요');return}
+    var e=newEp(date);S.er.push(e);erCur=e;persist();renderErAll();if(!silent)toast('접수이력을 추가했습니다');
+  }
+  $('er-find').onclick=function(){hitsFor($('er-q').value,$('er-hits'),function(p){erCur=null;pickPatient(p.chart)})};
+  $('er-q').addEventListener('keydown',function(e){if(e.key==='Enter')$('er-find').onclick()});
+  $('er-add').onclick=function(){if(!cur){toast('먼저 환자를 검색하세요');return}$('er-adddate').value=TODAY;$('er-addrow').hidden=false;$('er-adddate').focus()};
+  $('er-addok').onclick=function(){var d=$('er-adddate').value||TODAY;$('er-addrow').hidden=true;addEpisode(d)};
+  document.querySelectorAll('.st').forEach(function(b){b.onclick=function(){erTab=b.getAttribute('data-er');renderErAll()}});
+
+  function bPath(ep,path){var a=path.split('.'),o=ep;for(var i=0;i<a.length-1;i++){o=o[a[i]]=o[a[i]]||{}}return {o:o,k:a[a.length-1]}}
+  var binds=document.querySelectorAll('#mod-er [data-b]');
+  binds.forEach(function(el){el.addEventListener('input',function(){if(!erCur)return;var r=bPath(erCur,el.getAttribute('data-b'));r.o[r.k]=el.value;persistSoon();if(el.getAttribute('data-b')==='arrive')renderErList()});el.addEventListener('change',function(){if(!erCur)return;var r=bPath(erCur,el.getAttribute('data-b'));r.o[r.k]=el.value;persistSoon()})});
+  $('er-blood').onchange=function(){if(cur){cur.blood=$('er-blood').value;persistSoon();$('f-blood').value=cur.blood}};
+
+  function renderErList(){
+    var box=$('er-list');box.innerHTML='';
+    if(!cur){box.innerHTML='<div class="empty">환자를 검색하거나 + 환자등록으로 등록하세요.</div>';return}
+    var eps=epsOf();if(!eps.length){box.innerHTML='<div class="empty">접수이력이 없습니다.</div>';return}
+    eps.forEach(function(e){var b=document.createElement('button');b.type='button';b.className='ep';b.setAttribute('aria-pressed',String(!!erCur&&erCur.id===e.id));
+      b.textContent=e.date+' '+e.time+(e.arrive?' · '+e.arrive:'')+(e.final?' · '+e.final:'');b.onclick=function(){erCur=e;renderErAll()};box.appendChild(b)});
+  }
+  function renderErAll(){
+    if(mod!=='er')return;
+    if(erCur&&(!cur||erCur.chart!==cur.chart))erCur=null;
+    if(cur&&!erCur){var eps=epsOf();erCur=eps[0]||null}
+    document.querySelectorAll('.st').forEach(function(b){b.setAttribute('aria-selected',String(b.getAttribute('data-er')===erTab))});
+    ['img','lab','rx','rec'].forEach(function(k){$('er-p-'+k).hidden=k!==erTab});
+    renderErList();
+    $('er-name').value=cur?cur.name:'';$('er-chart').value=cur?cur.chart:'';$('er-age').value=cur?age(cur.birth):'';
+    $('er-blood').value=cur?cur.blood||'':'';$('er-blood').disabled=!cur;
+    document.querySelectorAll('input[name=er-sex]').forEach(function(r){r.checked=!!cur&&r.value===cur.sex});
+    binds.forEach(function(el){el.disabled=!erCur;var ep=erCur;if(!ep){el.value='';return}var r=bPath(ep,el.getAttribute('data-b'));el.value=r.o[r.k]==null?'':r.o[r.k]});
+    $('er-add').disabled=!cur;
+    var note=$('er-note');
+    if(!cur){note.hidden=false;note.textContent='환자를 검색하거나 상단 + 환자등록으로 등록하면 기록을 작성할 수 있습니다.'}
+    else if(!erCur&&erTab!=='img'){note.hidden=false;note.textContent='접수이력이 없습니다. 왼쪽의 달력추가로 응급 접수를 먼저 추가하세요.'}
+    else note.hidden=true;
+    $('img-add').disabled=!cur;
+    renderErImg();renderLab();renderRx();renderGcs();renderPainSum();
+    $('er-death').textContent=erCur&&erCur.death?'사망진단서 (작성됨)':'사망진단서';
+  }
+
+  /* 영상검사 (환자 단위, 수술기록과 공유) */
+  function imgsOf(){return cur?S.imaging.filter(function(i){return i.chart===cur.chart}).sort(function(a,b){return a.dt<b.dt?1:-1}):[]}
+  function viewImg(i){
+    $('v-title').textContent=(i.kind||'')+' · '+i.name+' · '+i.dt.replace('T',' ');
+    $('v-body').innerHTML=i.img?'<img class="pv" alt="'+esc(i.name)+'" src="'+i.img+'">':'<div class="empty">첨부된 이미지가 없습니다.</div>';showDlg('dlg-view');
+  }
+  function renderErImg(){
+    var tb=$('er-img-body');tb.innerHTML='';var list=imgsOf();
+    if(!list.length){tb.innerHTML='<tr><td colspan="3" style="color:var(--muted);text-align:center;cursor:default">'+(cur?'등록된 영상검사가 없습니다. 오른쪽 위 추가 버튼으로 등록하세요.':'환자를 선택하세요.')+'</td></tr>';return}
+    list.forEach(function(i){var tr=document.createElement('tr');
+      tr.innerHTML='<td class="num">'+esc(i.dt.replace('T',' '))+'</td><td>'+esc((i.kind?i.kind+' · ':'')+i.name)+'</td><td style="text-align:center"></td>';
+      var v=document.createElement('button');v.type='button';v.className='btn sm';v.textContent=i.img?'보기':'없음';v.onclick=function(e){e.stopPropagation();viewImg(i)};
+      var x=document.createElement('button');x.type='button';x.className='btn sm';x.textContent='×';x.setAttribute('aria-label','영상검사 삭제');x.style.marginLeft='4px';x.onclick=function(e){e.stopPropagation();S.imaging=S.imaging.filter(function(y){return y!==i});persist();renderErImg();renderOpImg();toast('영상검사를 삭제했습니다')};
+      tr.lastChild.appendChild(v);tr.lastChild.appendChild(x);tr.onclick=function(){viewImg(i)};tb.appendChild(tr)});
+  }
+  $('img-add').onclick=function(){if(!cur){toast('환자를 선택하세요');return}$('i-dt').value=nowLocal();$('i-name').value='';$('i-file').value='';$('i-kind').value='X-Ray';showDlg('dlg-img');$('i-name').focus()};
+  function downscale(file,cb){
+    var fr=new FileReader();fr.onload=function(){var im=new Image();im.onload=function(){var m=900,s=Math.min(1,m/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext('2d').drawImage(im,0,0,c.width,c.height);cb(c.toDataURL('image/jpeg',0.72))};im.onerror=function(){cb(null)};im.src=fr.result};fr.onerror=function(){cb(null)};fr.readAsDataURL(file)}
+  $('i-ok').onclick=function(){
+    var name=$('i-name').value.trim();if(!name){toast('영상검사명을 입력하세요');$('i-name').focus();return}
+    var f=$('i-file').files[0];
+    function done(data){
+      var it={id:S.nextId++,chart:cur.chart,kind:$('i-kind').value,name:name,dt:$('i-dt').value||nowLocal(),img:data||''};
+      S.imaging.push(it);if(!persist()){it.img='';persist();toast('저장 공간이 부족해 이미지 없이 등록했습니다')}else toast('영상검사를 추가했습니다');
+      hideDlg('dlg-img');renderErImg();renderOpImg();
+    }
+    if(f){downscale(f,done)}else done('');
+  };
+
+  /* 검사결과 */
+  var LABC=[['d','검사일자'],['cbc','CBC'],['ua','UA'],['inf','감염'],['lft','LFT'],['pft','PFT'],['tum','TUMOR'],['abga','ABGA'],['crp','CRP'],['esr','ESR'],['sp','특수혈액'],['etc','기타']];
+  $('lab-head').innerHTML='<tr>'+LABC.map(function(c){return '<th>'+c[1]+'</th>'}).join('')+'</tr>';
+  function renderLab(){
+    var tb=$('lab-body');tb.innerHTML='';
+    for(var r=0;r<10;r++){var tr=document.createElement('tr');
+      LABC.forEach(function(c){var td=document.createElement('td'),inp=document.createElement('input');inp.setAttribute('aria-label',c[1]+' '+(r+1)+'행');
+        if(c[0]==='d')inp.placeholder='YY-MM-DD';
+        inp.value=erCur&&erCur.labs[r]&&erCur.labs[r][c[0]]||'';inp.disabled=!erCur;
+        (function(r,k){inp.oninput=function(){if(!erCur)return;(erCur.labs[r]=erCur.labs[r]||{})[k]=inp.value;persistSoon()}})(r,c[0]);
+        td.appendChild(inp);tr.appendChild(td)});
+      tb.appendChild(tr)}
+  }
+
+  /* 처방내역 */
+  var RXST=['처방','수행완료','취소'],rxKind='';
+  document.querySelectorAll('[data-rx]').forEach(function(b){b.onclick=function(){
+    if(!erCur){toast('접수이력을 먼저 추가하세요');return}
+    rxKind=b.getAttribute('data-rx');$('rx-title').textContent='처방 추가 · '+rxKind;$('x-content').value='';$('x-caution').value='';
+    var last=erCur.rx.length?erCur.rx[erCur.rx.length-1].by:'';$('x-by').value=last;showDlg('dlg-rx');($('x-by').value?$('x-content'):$('x-by')).focus()}});
+  $('x-ok').onclick=function(){
+    var by=$('x-by').value.trim(),c=$('x-content').value.trim();
+    if(!by){toast('처방자를 입력하세요');$('x-by').focus();return}if(!c){toast('내용을 입력하세요');$('x-content').focus();return}
+    erCur.rx.push({id:S.nextId++,kind:rxKind,date:nowStr(),by:by,content:c,caution:$('x-caution').value.trim(),status:'처방'});
+    persist();hideDlg('dlg-rx');renderRx();docList();toast(rxKind+' 처방을 추가했습니다');
+  };
+  function renderRx(){
+    var tb=$('rx-body');tb.innerHTML='';var list=erCur?erCur.rx:[];
+    if(!list.length){tb.innerHTML='<tr><td colspan="7" style="color:var(--muted);text-align:center;cursor:default">처방 내역이 없습니다.</td></tr>';return}
+    list.forEach(function(r,i){var tr=document.createElement('tr');
+      tr.innerHTML='<td class="num">'+(i+1)+'</td><td>'+esc(r.kind)+'</td><td class="num">'+esc(r.date)+'</td><td>'+esc(r.by)+'</td><td style="white-space:normal">'+esc(r.content)+'</td><td style="white-space:normal">'+esc(r.caution)+'</td><td></td>';
+      var b=document.createElement('button');b.type='button';b.className='btn sm';b.textContent=r.status;b.title='누르면 상태가 바뀝니다';
+      b.onclick=function(){r.status=RXST[(RXST.indexOf(r.status)+1)%RXST.length];persist();renderRx()};tr.lastChild.appendChild(b);tb.appendChild(tr)});
+  }
+
+  /* GCS */
+  var GCS={e:[['4','자발적 개안'],['3','호명 시'],['2','통증 시'],['1','없음']],v:[['5','지남력 정상'],['4','혼돈'],['3','부적절한 단어'],['2','이해불능 소리'],['1','없음']],m:[['6','명령 수행'],['5','통증 위치 파악'],['4','통증 회피'],['3','비정상 굴곡'],['2','신전'],['1','없음']]};
+  var GN={e:'Eye Opening',v:'Verbal Response',m:'Motor Response'};
+  function renderGcs(){
+    var g=$('gcs');g.innerHTML='';
+    ['e','v','m'].forEach(function(k){
+      var l=document.createElement('label');l.textContent=GN[k];l.setAttribute('for','gcs-'+k);var s=document.createElement('select');s.id='gcs-'+k;
+      s.innerHTML='<option value="">-</option>'+GCS[k].map(function(o){return '<option value="'+o[0]+'">'+o[0]+' · '+o[1]+'</option>'}).join('');
+      s.value=erCur&&erCur.gcs&&erCur.gcs[k]||'';s.disabled=!erCur;
+      s.onchange=function(){if(!erCur)return;erCur.gcs=erCur.gcs||{};erCur.gcs[k]=s.value;persist();gcsTot()};
+      g.appendChild(l);g.appendChild(s)});
+    var t=document.createElement('div');t.className='tot';t.innerHTML='<span>총점</span><span id="gcs-tot">0</span>';g.appendChild(t);gcsTot();
+  }
+  function gcsTot(){var t=0,g=erCur&&erCur.gcs||{};['e','v','m'].forEach(function(k){t+=parseInt(g[k]||0,10)||0});$('gcs-tot').textContent=t}
+
+  /* 통증평가도구: NRS / FLACC */
+  function face(i){var m=['M13 30 Q24 43 35 30','M15 33 Q24 40 33 33','M16 36 Q24 38 32 36','M16 38 L32 38','M16 40 Q24 34 32 40','M14 41 Q24 31 34 41'][i];
+    return '<svg viewBox="0 0 48 48" width="40" height="40" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="#fff" stroke="#333" stroke-width="2"/><circle cx="17" cy="20" r="2.2" fill="#333"/><circle cx="31" cy="20" r="2.2" fill="#333"/><path d="'+m+'" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round"/></svg>'}
+  var nrsVal=null;
+  function buildNrs(){
+    var s=$('nrs-scale');s.innerHTML='<div class="tr"></div>';
+    for(var i=0;i<=10;i++){
+      if(i%2===0){var f=document.createElement('div');f.className='f';f.style.gridColumn=String(i+1);f.innerHTML=face(i/2);s.appendChild(f)}
+      var d=document.createElement('button');d.type='button';d.className='dt';d.style.gridColumn=String(i+1);d.setAttribute('aria-label','NRS '+i);d.setAttribute('data-v',i);
+      d.onclick=(function(i){return function(){nrsVal=i;paintNrs()}})(i);s.appendChild(d);
+      var n=document.createElement('div');n.className='nm';n.style.gridColumn=String(i+1);n.textContent=i;s.appendChild(n)}
+    [['No Pain',1],['Mild Pain',3],['Moderate Pain',6],['Severe Pain',8],['Extreme Pain',11]].forEach(function(l){var e=document.createElement('div');e.className='lbl';e.style.gridColumn=String(l[1]);e.textContent=l[0];if(l[1]===1)e.style.justifySelf='start';if(l[1]===11)e.style.justifySelf='end';s.appendChild(e)});
+  }
+  function paintNrs(){document.querySelectorAll('#nrs-scale .dt').forEach(function(d){d.classList.toggle('on',parseInt(d.getAttribute('data-v'),10)===nrsVal)});$('nrs-val').textContent=nrsVal==null?'점수를 선택하세요':'선택 점수: '+nrsVal+' / 10'}
+  buildNrs();
+  var FL=[['Face','0 특별한 표정 없음/미소 · 1 가끔 찡그림, 위축 · 2 턱 떨림, 이를 악뭄'],['Legs','0 정상/이완 · 1 불안, 긴장 · 2 발길질, 다리 오므림'],['Activity','0 조용히 누움 · 1 몸을 뒤척임, 긴장 · 2 활처럼 휨, 경직, 경련'],['Cry','0 울음 없음 · 1 신음, 가끔 호소 · 2 계속 울음, 자주 호소'],['Consolability','0 편안함 · 1 접촉·말로 안심 · 2 달래기 어려움']];
+  var fl={};
+  function buildFlacc(){
+    var t=$('flacc-t');t.innerHTML='';
+    FL.forEach(function(r,ri){var tr=document.createElement('tr'),th=document.createElement('th');th.textContent=r[0];th.title=r[1];tr.appendChild(th);
+      for(var v=0;v<3;v++){var td=document.createElement('td'),b=document.createElement('button');b.type='button';b.textContent=v;b.setAttribute('aria-label',r[0]+' '+v+'점');
+        b.className=fl[ri]===v?'on':'';b.onclick=(function(ri,v){return function(){fl[ri]=v;buildFlacc()}})(ri,v);td.appendChild(b);tr.appendChild(td)}
+      t.appendChild(tr)});
+    var n=Object.keys(fl).length,sum=0;Object.keys(fl).forEach(function(k){sum+=fl[k]});$('flacc-val').textContent=n?('합계 '+sum+' / 10 ('+n+'/5 항목)'):'항목별 점수를 선택하세요';
+  }
+  buildFlacc();
+  $('pain-nrs').onclick=function(){if(!erCur){toast('접수이력을 먼저 추가하세요');return}nrsVal=null;$('nrs-note').value='';paintNrs();showDlg('win-nrs')};
+  $('pain-flacc').onclick=function(){if(!erCur){toast('접수이력을 먼저 추가하세요');return}fl={};$('flacc-note').value='';buildFlacc();showDlg('win-flacc')};
+  $('nrs-ok').onclick=function(){if(nrsVal==null){toast('점수를 선택하세요');return}erCur.pain.push({type:'NRS',score:nrsVal,note:$('nrs-note').value.trim(),time:nowStr()});persist();renderPainSum();hideDlg('win-nrs');toast('NRS '+nrsVal+'점을 저장했습니다')};
+  $('flacc-ok').onclick=function(){if(Object.keys(fl).length<5){toast('다섯 항목을 모두 선택하세요');return}var s=0;Object.keys(fl).forEach(function(k){s+=fl[k]});erCur.pain.push({type:'FLACC',score:s,note:$('flacc-note').value.trim(),time:nowStr()});persist();renderPainSum();hideDlg('win-flacc');toast('FLACC '+s+'점을 저장했습니다')};
+  function renderPainSum(){['NRS','FLACC'].forEach(function(t){var l=erCur&&erCur.pain.filter(function(x){return x.type===t}).pop();$('pn-'+t.toLowerCase()).textContent=l?(l.score+'점 · '+l.time.slice(11)):''})}
+
+  /* 사망진단서 */
+  $('er-death').onclick=function(){
+    if(!erCur){toast('접수이력을 먼저 추가하세요');return}
+    var d=erCur.death||{};$('d-dt').value=d.dt||'';$('d-kind').value=d.kind||'';$('d-c1').value=d.c1||'';$('d-c2').value=d.c2||'';$('d-c3').value=d.c3||'';$('d-by').value=d.by||'';$('d-memo').value=d.memo||'';showDlg('dlg-death')};
+  $('d-ok').onclick=function(){erCur.death={dt:$('d-dt').value,kind:$('d-kind').value,c1:$('d-c1').value.trim(),c2:$('d-c2').value.trim(),c3:$('d-c3').value.trim(),by:$('d-by').value.trim(),memo:$('d-memo').value.trim()};persist();hideDlg('dlg-death');$('er-death').textContent='사망진단서 (작성됨)';toast('사망진단서를 저장했습니다')};
+  $('d-clear').onclick=function(){if(erCur){erCur.death=null;persist()}hideDlg('dlg-death');$('er-death').textContent='사망진단서';toast('서식을 삭제했습니다')};
+
+  /* =================== 수술기록 =================== */
+  var opSel=null,opDelArm=false;
+  var dOpts=[''].concat(DEPTS);
+  $('opf-dept').innerHTML='<option value="">전체 진료과</option>'+DEPTS.map(function(d){return '<option>'+d+'</option>'}).join('');
+  fillSel($('op-dept'),DEPTS);$('op-dept').value='외과';
+  function val(id){return $(id).value.trim()}
+  function opFiltered(){
+    var n=val('opf-name'),c=val('opf-chart'),dept=$('opf-dept').value,from=$('opf-from').value,to=$('opf-to').value;
+    var mode=(document.querySelector('input[name=opf-mode]:checked')||{}).value,sort=(document.querySelector('input[name=opf-sort]:checked')||{}).value;
+    var sp=Array.prototype.slice.call(document.querySelectorAll('.opf-sp:checked')).map(function(x){return x.value});
+    function inR(v){return (!from||v>=from)&&(!to||v<=to)}
+    var r=S.surg.filter(function(s){var p=pt(s.chart);if(!p)return false;
+      if(n&&p.name.indexOf(n)<0)return false;if(c&&s.chart.indexOf(c)<0)return false;if(dept&&s.dept!==dept)return false;
+      if(mode==='today'&&s.date!==TODAY)return false;if(mode==='recv'&&!inR(s.rdate))return false;if(mode==='rep'&&!inR(s.wdate))return false;
+      if(sp.length&&sp.indexOf(s.spec)<0)return false;return true});
+    r.sort(function(a,b){if(sort==='code')return (a.name||'').localeCompare(b.name||'','ko');if(sort==='class')return (a.surgeon||'').localeCompare(b.surgeon||'','ko');return a.date<b.date?1:-1});
+    return r;
+  }
+  function renderOpList(){
+    if(mod!=='op')return;
+    var tb=$('op-body');tb.innerHTML='';var rows=opFiltered();
+    rows.forEach(function(s,i){var p=pt(s.chart),tr=document.createElement('tr');tr.tabIndex=0;if(opSel===s.id)tr.className='sel';
+      tr.innerHTML='<td class="num">'+(i+1)+(s.fav?' ★':'')+(s.bm?' ▪':'')+'</td><td>'+esc(p.name)+'</td><td class="num">'+s.chart+'</td><td>'+p.sex+'</td><td>'+age(p.birth)+'</td><td>'+esc(s.surgeon)+'</td><td>'+esc(s.name)+'</td>';
+      var pick=function(){opSel=s.id;opDelArm=false;$('op-del').textContent='삭 제';cur=p;fillForm(p);renderHist();loadOp(s);renderOpList();renderOpHead();renderOpImg()};
+      tr.onclick=pick;tr.onkeydown=function(e){if(e.key==='Enter')pick()};tb.appendChild(tr)});
+    $('op-empty').hidden=rows.length>0;
+  }
+  function loadOp(s){
+    $('op-date').value=s?s.date:'';$('op-dept').value=s?s.dept:'외과';$('op-surgeon').value=s?s.surgeon:'';$('op-assist').value=s?s.assist:'';$('op-anes').value=s?s.anes:'';$('op-spec').value=s?s.spec:'';
+    $('op-pre').value=s?s.pre:'';$('op-post').value=s?s.post:'';$('op-name').value=s?s.name:'';$('op-special').value=s?s.special:'';$('op-process').value=s?s.process:'';
+    $('op-fav').checked=!!(s&&s.fav);$('op-bm').checked=!!(s&&s.bm);$('op-wdate').value=s?s.wdate:TODAY;
+  }
+  function renderOpHead(){
+    if(mod!=='op')return;
+    var s=opSel&&S.surg.filter(function(x){return x.id===opSel})[0];
+    $('op-title').textContent='수술기록 '+(s?s.dept:$('op-dept').value)+' - '+(s&&s.name?s.name:'수술명');
+    $('op-pt').textContent='대상 환자: '+(cur?cur.name+' ('+cur.chart+')':'선택 안 됨 · 상단 + 환자등록에서 검색')
+  }
+  ['op-dept','op-name'].forEach(function(id){$(id).addEventListener('input',function(){if(!opSel){$('op-title').textContent='수술기록 '+$('op-dept').value+' - '+($('op-name').value||'수술명')}})});
+  $('op-dept').addEventListener('change',function(){if(!opSel)$('op-title').textContent='수술기록 '+$('op-dept').value+' - '+($('op-name').value||'수술명')});
+  $('op-newrec').onclick=function(){opSel=null;opDelArm=false;$('op-del').textContent='삭 제';loadOp(null);renderOpList();renderOpHead()};
+  $('op-save').onclick=function(){
+    if(!cur){toast('먼저 환자를 선택하세요 (상단 + 환자등록)');return}
+    if(!val('op-name')){toast('수술명을 입력하세요');$('op-name').focus();return}
+    if(!$('op-date').value){toast('수술일을 입력하세요');$('op-date').focus();return}
+    var d={date:$('op-date').value,dept:$('op-dept').value,surgeon:val('op-surgeon'),assist:val('op-assist'),anes:$('op-anes').value,spec:$('op-spec').value,pre:val('op-pre'),post:val('op-post'),name:val('op-name'),special:val('op-special'),process:val('op-process'),fav:$('op-fav').checked,bm:$('op-bm').checked,wdate:$('op-wdate').value||TODAY};
+    var s=opSel&&S.surg.filter(function(x){return x.id===opSel})[0];
+    if(s){Object.assign(s,d);toast('수술기록을 수정했습니다')}else{s=Object.assign({id:S.nextId++,chart:cur.chart,rdate:TODAY},d);S.surg.push(s);opSel=s.id;toast('수술기록을 작성했습니다')}
+    persist();docList();renderOpList();renderOpHead();
+  };
+  function delOp(btn){
+    if(!opSel){toast('삭제할 수술기록을 선택하세요');return}
+    if(!opDelArm){opDelArm=true;$('op-del').textContent='한 번 더';toast('한 번 더 누르면 삭제됩니다');return}
+    S.surg=S.surg.filter(function(x){return x.id!==opSel});opSel=null;opDelArm=false;$('op-del').textContent='삭 제';persist();loadOp(null);renderOpList();renderOpHead();toast('수술기록을 삭제했습니다');
+  }
+  $('op-del').onclick=delOp;$('op-trash').onclick=delOp;
+  $('opf-go').onclick=renderOpList;
+  ['opf-name','opf-chart'].forEach(function(id){$(id).addEventListener('keydown',function(e){if(e.key==='Enter')renderOpList()})});
+  $('opf-reset').onclick=function(){['opf-name','opf-chart','opf-from','opf-to'].forEach(function(id){$(id).value=''});$('opf-dept').value='';document.querySelectorAll('input[name=opf-mode],input[name=opf-sort],.opf-sp').forEach(function(x){x.checked=false});renderOpList()};
+  document.querySelectorAll('.yr').forEach(function(b){b.onclick=function(){var y=parseInt(b.getAttribute('data-yr'),10),d=new Date(today.getFullYear()-y,today.getMonth(),today.getDate());$('opf-from').value=ymd(d);$('opf-to').value=TODAY;var m=document.querySelector('input[name=opf-mode][value=recv]');m.checked=true;renderOpList()}});
+
+  function renderOpImg(){
+    if(mod!=='op')return;
+    var tb=$('opi-body');tb.innerHTML='';
+    if(!cur){$('opi-empty').hidden=false;$('opi-empty').textContent='환자를 선택하면 영상검사가 표시됩니다.';return}
+    var kinds=Array.prototype.slice.call(document.querySelectorAll('.opi-k:checked')).map(function(x){return x.value}),q=val('opi-q').toLowerCase();
+    var list=imgsOf().filter(function(i){return (!kinds.length||kinds.indexOf(i.kind)>-1)&&(!q||i.name.toLowerCase().indexOf(q)>-1)});
+    $('opi-empty').hidden=list.length>0;$('opi-empty').textContent='조건에 맞는 영상검사가 없습니다. 응급기록 > 영상검사에서 추가할 수 있습니다.';
+    list.forEach(function(i){var tr=document.createElement('tr');tr.innerHTML='<td class="num" title="'+esc(i.name)+'">'+esc(i.dt.slice(0,10))+' '+esc(i.kind)+'</td><td style="text-align:center"></td>';
+      var b=document.createElement('button');b.type='button';b.className='btn sm';b.textContent=i.img?'보기':'없음';b.onclick=function(e){e.stopPropagation();viewImg(i)};tr.lastChild.appendChild(b);tr.onclick=function(){viewImg(i)};tb.appendChild(tr)});
+  }
+  document.querySelectorAll('.opi-k').forEach(function(c){c.onchange=renderOpImg});$('opi-q').addEventListener('input',renderOpImg);
+
+  function tick(){var n=new Date();$('clock').textContent=n.getFullYear()+'.'+p2(n.getMonth()+1)+'.'+p2(n.getDate())+' '+['일','월','화','수','목','금','토'][n.getDay()]+' '+p2(n.getHours())+':'+p2(n.getMinutes())}
+  tick();setInterval(tick,30000);
+  fillForm(null);renderHist();renderAll();loadNote();loadOp(null);
+})();
+</script>
+
+</body></html>

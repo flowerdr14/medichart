@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MediChart</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%22300%2040%201020%201500%22%3E%3Cpath%20fill%3D%22%23808080%22%20fill-rule%3D%22evenodd%22%20d%3D%22M808%2085C600%20370%20340%20760%20340%201025A468%20468%200%200%200%201277%201025C1277%20760%201010%20370%20808%2085ZM808%20258C640%20500%20438%20830%20438%201025A370%20370%200%200%200%201177%201025C1177%20830%20975%20500%20808%20258Z%22%2F%3E%3Cpath%20fill%3D%22%23808080%22%20d%3D%22M741%20897h134v104h104v134H875v105H741V1135H637V1001h104z%22%2F%3E%3C%2Fsvg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="window">
+  <div class="nav" role="tablist" aria-label="기록 구분">
+    <span class="brand"><svg class="logo" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="300 40 1020 1500"><path fill="currentColor" fill-rule="evenodd" d="M808 85C600 370 340 760 340 1025A468 468 0 0 0 1277 1025C1277 760 1010 370 808 85ZM808 258C640 500 438 830 438 1025A370 370 0 0 0 1177 1025C1177 830 975 500 808 258Z"/><path fill="currentColor" d="M741 897h134v104h104v134H875v105H741V1135H637V1001h104z"/></svg>MediChart</span>
+    <button class="nt" role="tab" data-mod="er" aria-selected="false" type="button">응급기록</button>
+    <button class="nt" role="tab" data-mod="opd" aria-selected="true" type="button">외래기록</button>
+    <button class="nt" role="tab" data-mod="op" aria-selected="false" type="button">수술기록</button>
+    <span class="sp"></span>
+    <span class="clock" id="clock"></span>
+    <button class="reg" id="btn-reg" type="button">+ 환자등록</button>
+  </div>
+
+  <!-- ================= 외래기록 ================= -->
+  <div class="mod" id="mod-opd">
+    <div class="toolbar">
+      <button class="btn" id="btn-new" type="button">신규</button>
+      <button class="btn blue" id="btn-save" type="button">저장</button>
+      <button class="btn" id="btn-del" type="button">삭제</button>
+      <span class="sep"></span>
+      <button class="btn red" id="btn-rx" type="button">접수</button>
+      <button class="btn" id="btn-cancel" type="button">접수취소</button>
+      <span class="sep"></span>
+      <button class="btn" data-st="진료중" type="button">호출(진료중)</button>
+      <button class="btn" data-st="완료" type="button">진료완료</button>
+      <button class="btn" data-st="수납" type="button">수납완료</button>
+      <span class="note" id="del-note"></span>
+    </div>
+    <div class="app">
+      <div class="col">
+        <section class="pane" aria-labelledby="h-pt">
+          <div class="hd"><span id="h-pt">등록정보</span><span class="sp"></span>
+            <input id="q" type="search" placeholder="성명/차트번호" autocomplete="off" aria-label="환자 검색">
+            <button class="btn sm" id="btn-search" type="button">조회</button>
+          </div>
+          <div class="hits" id="hits"></div>
+          <div class="bd">
+            <div class="frm">
+              <div class="lb">차트번호</div><div class="fld"><input id="f-chart" class="chart-no" readonly aria-label="차트번호"></div>
+              <div class="lb">성명</div><div class="fld"><input id="f-name" autocomplete="off" aria-label="성명"></div>
+              <div class="lb">생년월일</div><div class="fld"><input id="f-birth" type="date" aria-label="생년월일"></div>
+              <div class="lb">성별</div><div class="fld"><select id="f-sex" aria-label="성별"><option>여</option><option>남</option></select></div>
+              <div class="lb">휴대폰</div><div class="fld"><input id="f-tel" inputmode="tel" placeholder="010-0000-0000" aria-label="휴대폰"></div>
+              <div class="lb">보험구분</div><div class="fld"><select id="f-ins" aria-label="보험구분"><option>건강보험</option><option>의료급여</option><option>산재</option><option>자동차보험</option><option>일반</option></select></div>
+              <div class="lb">E-mail</div><div class="fld span3"><input id="f-mail" type="email" style="flex:1 1 140px" aria-label="이메일">
+                <label class="ck"><input type="checkbox" id="f-mailok">E-mail 수신</label>
+                <label class="ck"><input type="checkbox" id="f-smsok">SMS 수신</label>
+                <label class="ck"><input type="checkbox" id="f-agree">개인정보동의</label></div>
+              <div class="lb">주소</div><div class="fld span3"><input id="f-addr" aria-label="주소"></div>
+              <div class="lb">알레르기</div><div class="fld"><input id="f-alg" placeholder="예: 페니실린" aria-label="알레르기"></div>
+              <div class="lb">혈액형</div><div class="fld"><select id="f-blood" aria-label="혈액형"></select></div>
+              <div class="lb">비고</div><div class="fld span3"><input id="f-memo" aria-label="비고"></div>
+            </div>
+            <div class="row-act"><span class="info" id="age-info"></span></div>
+          </div>
+        </section>
+
+        <section class="pane" aria-label="진료기록 탭">
+          <div class="tabs" role="tablist">
+            <button class="tab" role="tab" aria-selected="true" data-tab="note" type="button">진료기록</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="hist" type="button">이전내역</button>
+          </div>
+          <div class="bd" id="tab-note">
+            <div style="margin-bottom:4px;color:var(--muted)" id="note-who">접수 현황에서 환자를 선택하세요</div>
+            <div class="vitals">
+              <div><label for="v-bp">혈압(mmHg)</label><input id="v-bp" placeholder="120/80"></div>
+              <div><label for="v-hr">맥박(회/분)</label><input id="v-hr" inputmode="numeric"></div>
+              <div><label for="v-bt">체온(℃)</label><input id="v-bt" inputmode="decimal"></div>
+              <div><label for="v-wt">체중(kg)</label><input id="v-wt" inputmode="decimal"></div>
+            </div>
+            <div class="soap">
+              <div><label for="n-s">S 주관적 소견</label><textarea id="n-s"></textarea></div>
+              <div><label for="n-o">O 객관적 소견</label><textarea id="n-o"></textarea></div>
+              <div><label for="n-a">A 진단(상병)</label><textarea id="n-a"></textarea></div>
+              <div><label for="n-p">P 처방·계획</label><textarea id="n-p"></textarea></div>
+            </div>
+            <div class="row-act"><button class="btn blue" id="btn-note" type="button">기록 저장</button></div>
+          </div>
+          <div class="bd hist" id="tab-hist" hidden><ul id="hist"></ul></div>
+        </section>
+
+        <section class="pane" aria-labelledby="h-rx">
+          <div class="hd"><span id="h-rx">접수정보</span><span class="sp"></span><small id="rx-who">환자를 선택하세요</small></div>
+          <div class="bd">
+            <div class="frm">
+              <div class="lb">접수일</div><div class="fld"><input id="r-date" type="date" aria-label="접수일"></div>
+              <div class="lb">접수구분</div><div class="fld"><select id="r-type" aria-label="접수구분"><option>초진</option><option selected>재진</option><option>예약</option></select></div>
+              <div class="lb">진료과</div><div class="fld"><select id="r-dept" aria-label="진료과"></select></div>
+              <div class="lb">담당의</div><div class="fld"><input id="r-doc" list="doc-list" placeholder="직접 입력" autocomplete="off" aria-label="담당의"><datalist id="doc-list"></datalist></div>
+              <div class="lb">진료유형</div><div class="fld span3">
+                <label class="ck"><input type="checkbox" class="kind" value="일반" checked>일반</label>
+                <label class="ck"><input type="checkbox" class="kind" value="건강검진">건강검진</label>
+                <label class="ck"><input type="checkbox" class="kind" value="예방접종">예방접종</label>
+                <label class="ck"><input type="checkbox" class="kind" value="응급">응급</label></div>
+              <div class="lb">주증상</div><div class="fld span3"><input id="r-memo" placeholder="예: 3일 전부터 기침, 미열" aria-label="주증상"></div>
+            </div>
+            <div class="row-act"><button class="btn blue" id="btn-rxsave" type="button">접수정보 저장</button><button class="btn red" id="btn-rx2" type="button">접수</button><span class="info" id="rx-saved"></span></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="col">
+        <section class="pane" aria-labelledby="h-q">
+          <div class="hd"><span id="h-q">접수현황</span><span class="sp"></span><small id="q-date"></small></div>
+          <div class="filters" role="group" aria-label="상태 필터" id="chips"></div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>상태</th><th>순번</th><th>접수</th><th>차트번호</th><th>성명</th><th>성/나이</th><th>진료과</th><th>담당의</th><th>구분</th><th>진료유형</th></tr></thead>
+              <tbody id="queue"></tbody>
+            </table>
+          </div>
+          <div class="empty" id="q-empty" hidden>접수 내역이 없습니다.</div>
+        </section>
+        <div class="two">
+          <section class="pane" aria-label="진료 달력">
+            <div class="cal-hd"><button id="cal-prev" type="button" aria-label="이전 달">◀</button><b id="cal-title"></b><button id="cal-next" type="button" aria-label="다음 달">▶</button></div>
+            <div class="cal" id="cal"></div>
+            <div class="bd"><button class="btn sm" id="cal-today" type="button">오늘</button></div>
+          </section>
+          <section class="pane" aria-labelledby="h-sc">
+            <div class="hd"><span id="h-sc">TODAY OF Schedule</span><span class="sp"></span><small id="sc-date"></small></div>
+            <div class="bd">
+              <div style="color:var(--muted);margin-bottom:4px">환자와 접수정보(진료과·담당의)를 입력하고 빈 시간을 누르면 예약됩니다.</div>
+              <div class="sched-wrap"><div class="sched" id="sched"></div></div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+    <div class="statusbar"><span id="st-total"></span><span id="st-wait"></span><span id="st-busy"></span><span id="st-done"></span></div>
+  </div>
+
+  <!-- ================= 응급기록 ================= -->
+  <div class="mod" id="mod-er" hidden>
+    <div class="subnav" role="tablist" aria-label="응급기록 구분">
+      <button class="st" role="tab" data-er="img" aria-selected="true" type="button">영상검사</button>
+      <button class="st" role="tab" data-er="lab" aria-selected="false" type="button">검사결과</button>
+      <button class="st" role="tab" data-er="rx" aria-selected="false" type="button">처방내역</button>
+      <button class="st" role="tab" data-er="rec" aria-selected="false" type="button">진료기록</button>
+    </div>
+    <div class="er">
+      <aside class="er-left">
+        <div class="th">접수이력</div>
+        <div class="er-hist">
+          <div class="er-find"><input id="er-q" type="search" placeholder="환자 검색(성명/차트번호)" autocomplete="off" aria-label="응급 환자 검색"><button class="btn sm" id="er-find" type="button">검색</button></div>
+          <div class="hits" id="er-hits" style="padding:0"></div>
+          <div id="er-list"></div>
+          <div class="er-add">
+            <button class="tealbtn" id="er-add" type="button">달력추가</button>
+            <div id="er-addrow" hidden style="margin-top:6px;display:flex;gap:4px;justify-content:center"><input id="er-adddate" type="date" aria-label="접수 날짜" style="width:auto"><button class="btn sm" id="er-addok" type="button">추가</button></div>
+          </div>
+        </div>
+        <div class="th">환자정보</div>
+        <div class="er-info">
+          <div class="ir"><label for="er-name">성명</label><input id="er-name" class="ul" readonly></div>
+          <div class="ir"><label for="er-chart">차트번호</label><input id="er-chart" class="ul" readonly></div>
+          <div class="ir"><label for="er-dept">진료과</label><select id="er-dept" class="ul" data-b="dept"></select></div>
+          <div class="ir"><label for="er-blood">혈액형</label><select id="er-blood" class="ul"></select></div>
+          <div class="ir"><label for="er-age">나이</label><input id="er-age" class="ul" readonly></div>
+          <div class="ir"><label>성별</label><span><label class="ck"><input type="radio" name="er-sex" value="남" disabled>남</label> <label class="ck"><input type="radio" name="er-sex" value="여" disabled>여</label></span></div>
+        </div>
+        <div class="er-arrive"><label for="er-arrive">내원방식</label><input id="er-arrive" data-b="arrive" list="arrive-list" autocomplete="off"><datalist id="arrive-list"><option value="119 구급차"><option value="직접 내원"><option value="타병원 전원"><option value="외래 경유"><option value="경찰 이송"></datalist></div>
+      </aside>
+
+      <section class="er-main">
+        <div class="er-note" id="er-note" hidden></div>
+
+        <div id="er-p-img">
+          <div class="er-top"><button class="tealbtn" id="img-add" type="button">추가</button></div>
+          <table style="margin-top:6px"><thead><tr><th style="width:26%">일시</th><th>영상검사명</th><th style="width:24%">이미지 보기</th></tr></thead><tbody id="er-img-body"></tbody></table>
+        </div>
+
+        <div id="er-p-lab" hidden>
+          <div style="overflow:auto"><table class="labt"><thead id="lab-head"></thead><tbody id="lab-body"></tbody></table></div>
+          <div class="lab-extra"><h4>추가 검사결과</h4><textarea data-b="labExtra" aria-label="추가 검사결과"></textarea></div>
+        </div>
+
+        <div id="er-p-rx" hidden>
+          <div class="er-top"><div class="rowb"><button class="tealbtn" data-rx="검사" type="button">검사</button><button class="tealbtn" data-rx="약물" type="button">약물</button><button class="tealbtn" data-rx="처치" type="button">처치</button></div>
+            <div class="rowb"><button class="tealbtn" data-rx="진료" type="button">진료</button><button class="tealbtn" data-rx="협진" type="button">협진</button><button class="tealbtn" data-rx="퇴원" type="button">퇴원</button><button class="tealbtn" data-rx="기타" type="button">기타</button></div></div>
+          <div style="overflow:auto;margin-top:6px"><table style="min-width:640px"><thead><tr><th>No</th><th>종류</th><th>처방일자</th><th>처방자</th><th>내용</th><th>주의사항</th><th>상태</th></tr></thead><tbody id="rx-body"></tbody></table></div>
+        </div>
+
+        <div id="er-p-rec" class="rec" hidden>
+          <div class="rc-mid">
+            <div class="tp"><div class="th">V/S</div><div class="tb vs">
+              <label for="vs-hr">HR</label><input id="vs-hr" class="ul" data-b="vs.hr" inputmode="numeric"><small>bpm</small>
+              <label for="vs-rr">RR</label><input id="vs-rr" class="ul" data-b="vs.rr" inputmode="numeric"><small>회/min</small>
+              <label>BP</label><span class="bp"><input class="ul" data-b="vs.bp1" inputmode="numeric" aria-label="수축기 혈압" style="width:70px"> / <input class="ul" data-b="vs.bp2" inputmode="numeric" aria-label="이완기 혈압" style="width:70px"> <small>mmHg</small></span>
+              <label for="vs-bt">BT</label><input id="vs-bt" data-b="vs.bt" inputmode="decimal" style="border:2px solid #000"><small>℃</small>
+            </div></div>
+            <div class="tp grow"><div class="th">처치/수술기록</div><textarea data-b="proc" aria-label="처치/수술기록"></textarea></div>
+            <div class="tp"><div class="th">최종상태</div><div class="tb" style="display:flex;gap:6px;flex-wrap:wrap"><select data-b="final" style="flex:0 1 140px" aria-label="최종상태"><option value=""></option><option>귀가</option><option>입원</option><option>중환자실</option><option>전원</option><option>사망</option><option>기타</option></select><input data-b="finalNote" style="flex:1 1 140px" aria-label="최종상태 메모" placeholder="메모"></div></div>
+          </div>
+          <div class="rc-right">
+            <div class="tp exam"><div class="th">EXAM</div><textarea data-b="exam" aria-label="EXAM"></textarea></div>
+            <div class="rc-row">
+              <div class="tp"><div class="th">GCS 관리</div><div class="tb gcs" id="gcs"></div></div>
+              <div class="rc-col">
+                <div class="tp"><div class="th">통증평가도구</div><div class="pain-btns"><div><button id="pain-nrs" type="button">NRS</button><small id="pn-nrs"></small></div><div><button id="pain-flacc" type="button">FLACC Scale</button><small id="pn-flacc"></small></div></div></div>
+                <button class="th btn-th" id="er-death" type="button">사망진단서</button>
+              </div>
+            </div>
+            <div class="tp"><div class="th">병력관리</div><div class="tb hx">
+              <div><div class="ir"><label for="hx-psh">PSH</label><input id="hx-psh" class="ul" data-b="hx.psh"></div><div class="ir"><label for="hx-meds">복용약물</label><input id="hx-meds" class="ul" data-b="hx.meds"></div><div class="ir"><label for="hx-alg">알러지</label><input id="hx-alg" class="ul" data-b="hx.alg"></div></div>
+              <div><div class="ir"><label for="hx-hpi">HPI</label><input id="hx-hpi" class="ul" data-b="hx.hpi"></div><div class="ir"><label for="hx-pmh">PMH</label><input id="hx-pmh" class="ul" data-b="hx.pmh"></div></div>
+            </div></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ================= 수술기록 ================= -->
+  <div class="mod" id="mod-op" hidden>
+    <div class="op">
+      <section aria-label="수술예약일자">
+        <div class="oh">수술예약일자</div>
+        <div class="op-f">
+          <div class="r"><span class="tag">검색</span><input id="opf-name" placeholder="환자명" aria-label="환자명"><input id="opf-chart" placeholder="차트번호" aria-label="차트번호"></div>
+          <div class="r rd"><label class="ck"><input type="radio" name="opf-mode" value="today">당일</label><label class="ck"><input type="radio" name="opf-mode" value="recv">접수일</label><label class="ck"><input type="radio" name="opf-mode" value="rep">보고일</label>
+            <input type="date" id="opf-from" aria-label="시작일"><input type="date" id="opf-to" aria-label="종료일"></div>
+          <div class="r"><select id="opf-dept" aria-label="진료과"></select><button class="yr" data-yr="5" type="button">&lt; 5년</button><button class="yr" data-yr="4" type="button">&lt; 4년</button><button class="yr" data-yr="3" type="button">&lt; 3년</button><button class="yr" data-yr="2" type="button">&lt; 2년</button><button class="yr" data-yr="1" type="button">&lt; 1년</button></div>
+          <div class="r">유형 :<label class="ck"><input type="radio" name="opf-sort" value="code">처방코드별</label><label class="ck"><input type="radio" name="opf-sort" value="class">검사분류별</label></div>
+          <div class="r">전체 :<label class="ck"><input type="checkbox" class="opf-sp" value="검체일반">검체일반</label><label class="ck"><input type="checkbox" class="opf-sp" value="검체판독">검체판독</label><label class="ck"><input type="checkbox" class="opf-sp" value="환자검사">환자검사</label>
+            <span style="flex:1"></span><button class="btn sm" id="opf-reset" type="button">초기화</button><button class="skybtn" id="opf-go" type="button">조 회</button></div>
+        </div>
+        <div class="op-list"><table class="op-t"><thead><tr><th>No.</th><th>환자명</th><th>차트번호</th><th>성별</th><th>나이</th><th>집도의</th><th>수술명</th></tr></thead><tbody id="op-body"></tbody></table>
+          <div class="empty" id="op-empty">수술 기록이 없습니다. 환자를 선택하고 오른쪽에서 작성하세요.</div></div>
+      </section>
+
+      <section aria-label="수술기록">
+        <div class="oh" id="op-title">수술기록 과 - 수술명</div>
+        <div class="opm-top">
+          <div class="r"><button class="ibtn" id="op-trash" type="button" aria-label="선택한 기록 삭제" title="삭제"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg></button>
+            <button class="ibtn" id="op-newrec" type="button" aria-label="새 기록" title="새 기록"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h4"/></svg></button>
+            <span class="pt-line" id="op-pt">대상 환자: 선택 안 됨</span></div>
+          <div class="r"><label class="ck"><input type="checkbox" id="op-fav">★ favorite 등록</label><label class="ck"><input type="checkbox" id="op-bm">북마크 등록</label></div>
+          <div class="r" style="justify-content:space-between"><span class="wd"><label for="op-wdate">작성일</label><input id="op-wdate" type="date"></span><button class="skybtn" id="op-save" type="button">작 성</button></div>
+        </div>
+        <div class="opm-body">
+          <div class="sec">수술 기본정보</div>
+          <div class="rowf"><label for="op-date">수술일 :</label><input id="op-date" type="date" class="ul"></div>
+          <div class="rowf"><label for="op-dept">진료과 :</label><select id="op-dept" class="ul"></select></div>
+          <div class="rowf"><label for="op-surgeon">집도의 :</label><input id="op-surgeon" class="ul" autocomplete="off"></div>
+          <div class="rowf"><label for="op-assist">보조의 :</label><input id="op-assist" class="ul" autocomplete="off"></div>
+          <div class="rowf"><label for="op-anes">마취방법 :</label><select id="op-anes" class="ul"><option value=""></option><option>전신마취</option><option>척추마취</option><option>경막외마취</option><option>국소마취</option><option>수면마취</option><option>기타</option></select></div>
+          <div class="rowf"><label for="op-spec">검체구분 :</label><select id="op-spec" class="ul"><option value=""></option><option>검체일반</option><option>검체판독</option><option>환자검사</option></select></div>
+          <div class="sec">수술전 진단명</div>
+          <div class="rowf"><label for="op-pre">진단명:</label><input id="op-pre" class="ul"></div>
+          <div class="sec">수술후 진단명</div>
+          <div class="rowf"><label for="op-post">진단명:</label><input id="op-post" class="ul"></div>
+          <div class="sec">수술명</div>
+          <div class="rowf"><label for="op-name">수술명:</label><input id="op-name" class="ul"></div>
+          <div class="sec">수술중 특이사항</div>
+          <div class="rowf"><label for="op-special">특이사항:</label><textarea id="op-special"></textarea></div>
+          <div class="sec">수술과정</div>
+          <div class="rowf"><label for="op-process">내용:</label><textarea id="op-process"></textarea></div>
+          <div class="opm-foot" style="margin-top:auto;padding-top:10px"><button class="skybtn lt" id="op-del" type="button">삭 제</button></div>
+        </div>
+      </section>
+
+      <aside aria-label="영상검사">
+        <div class="oh">영상검사</div>
+        <div class="vw-hd"><label class="ck"><input type="checkbox" class="opi-k" value="CT">CT</label><label class="ck"><input type="checkbox" class="opi-k" value="MRI">MRI</label><label class="ck"><input type="checkbox" class="opi-k" value="X-Ray">X-Ray</label>
+          <div style="flex:1 1 100%;display:flex;gap:4px;border:2px solid #000;align-items:center;padding:0 6px"><input id="opi-q" style="border:0" placeholder="검사명 검색" aria-label="영상검사 검색"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2a8fbd" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="M15 15l6 6"/></svg></div></div>
+        <table class="sk-img-t" style="min-width:0"><thead><tr><th>검사일</th><th style="width:70px">사진보기</th></tr></thead><tbody id="opi-body"></tbody></table>
+        <div class="empty" id="opi-empty">환자를 선택하면 영상검사가 표시됩니다.</div>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 팝업들 ===== -->
+<div class="ov" id="ov-pt" hidden><div class="dlg wide" id="dlg-pt" role="dialog" aria-label="환자등록">
+  <div class="dh"><span>환자등록</span><button type="button" data-close="dlg-pt" aria-label="닫기">✕</button></div>
+  <div class="db">
+    <div><label for="p-q">기존 환자 검색</label><div style="display:flex;gap:4px"><input id="p-q" type="search" placeholder="성명 또는 차트번호" autocomplete="off"><button class="btn" id="p-find" type="button">검색</button></div><div class="hits" id="p-hits" style="padding:4px 0 0"></div></div>
+    <div class="grid2">
+      <div><label for="p-name">성명 *</label><input id="p-name" autocomplete="off"></div>
+      <div><label for="p-birth">생년월일 *</label><input id="p-birth" type="date"></div>
+      <div><label for="p-sex">성별</label><select id="p-sex"><option>여</option><option>남</option></select></div>
+      <div><label for="p-blood">혈액형</label><select id="p-blood"></select></div>
+      <div><label for="p-tel">휴대폰</label><input id="p-tel" inputmode="tel" placeholder="010-0000-0000"></div>
+      <div><label for="p-ins">보험구분</label><select id="p-ins"><option>건강보험</option><option>의료급여</option><option>산재</option><option>자동차보험</option><option>일반</option></select></div>
+    </div>
+    <div class="acts"><button class="btn" data-close="dlg-pt" type="button">닫기</button><button class="btn blue" id="p-ok" type="button">등록</button></div>
+  </div></div></div>
+
+<div class="ov" id="ov-img" hidden><div class="dlg" id="dlg-img" role="dialog" aria-label="영상검사 추가">
+  <div class="dh"><span>영상검사 추가</span><button type="button" data-close="dlg-img" aria-label="닫기">✕</button></div>
+  <div class="db">
+    <div class="grid2"><div><label for="i-kind">종류</label><select id="i-kind"><option>X-Ray</option><option>CT</option><option>MRI</option><option>초음파</option><option>기타</option></select></div>
+      <div><label for="i-dt">일시</label><input id="i-dt" type="datetime-local"></div></div>
+    <div><label for="i-name">영상검사명</label><input id="i-name" placeholder="예: Chest PA"></div>
+    <div><label for="i-file">이미지 파일(선택)</label><input id="i-file" type="file" accept="image/*"></div>
+    <div class="acts"><button class="btn" data-close="dlg-img" type="button">취소</button><button class="btn blue" id="i-ok" type="button">추가</button></div>
+  </div></div></div>
+
+<div class="ov" id="ov-view" hidden><div class="dlg wide" id="dlg-view" role="dialog" aria-label="이미지 보기">
+  <div class="dh"><span id="v-title">이미지 보기</span><button type="button" data-close="dlg-view" aria-label="닫기">✕</button></div>
+  <div class="db" id="v-body"></div></div></div>
+
+<div class="ov" id="ov-rx" hidden><div class="dlg" id="dlg-rx" role="dialog" aria-label="처방 추가">
+  <div class="dh"><span id="rx-title">처방 추가</span><button type="button" data-close="dlg-rx" aria-label="닫기">✕</button></div>
+  <div class="db">
+    <div><label for="x-by">처방자</label><input id="x-by" list="doc-list" autocomplete="off"></div>
+    <div><label for="x-content">내용</label><textarea id="x-content"></textarea></div>
+    <div><label for="x-caution">주의사항</label><input id="x-caution"></div>
+    <div class="acts"><button class="btn" data-close="dlg-rx" type="button">취소</button><button class="btn blue" id="x-ok" type="button">처방</button></div>
+  </div></div></div>
+
+<div class="ov" id="ov-death" hidden><div class="dlg wide" id="dlg-death" role="dialog" aria-label="사망진단서">
+  <div class="dh"><span>사망진단서</span><button type="button" data-close="dlg-death" aria-label="닫기">✕</button></div>
+  <div class="db">
+    <div style="color:var(--muted)">연습용 서식입니다. 법적 효력이 없습니다.</div>
+    <div class="grid2"><div><label for="d-dt">사망일시</label><input id="d-dt" type="datetime-local"></div>
+      <div><label for="d-kind">사망의 종류</label><select id="d-kind"><option value=""></option><option>병사</option><option>외인사</option><option>기타 및 불상</option></select></div></div>
+    <div><label for="d-c1">(가) 직접 사인</label><input id="d-c1"></div>
+    <div><label for="d-c2">(나) (가)의 원인</label><input id="d-c2"></div>
+    <div><label for="d-c3">(다) (나)의 원인</label><input id="d-c3"></div>
+    <div class="grid2"><div><label for="d-by">작성의</label><input id="d-by" list="doc-list" autocomplete="off"></div><div><label for="d-memo">비고</label><input id="d-memo"></div></div>
+    <div class="acts"><button class="btn" id="d-clear" type="button">서식 삭제</button><button class="btn" data-close="dlg-death" type="button">닫기</button><button class="btn blue" id="d-ok" type="button">저장</button></div>
+  </div></div></div>
+
+<div class="ov" id="ov-pain" hidden>
+  <div class="dlg" id="win-nrs" hidden role="dialog" aria-label="NRS 평가도구">
+    <div class="dh"><span>NRS 평가도구</span><button type="button" data-close="win-nrs" aria-label="닫기">✕</button></div>
+    <div class="db"><div style="text-align:center;font-weight:700;font-size:11px">NRS · PAIN SCORE 0-10 NUMERICAL RATING</div>
+      <div class="nrs" id="nrs-scale"></div>
+      <div id="nrs-val" style="text-align:center">점수를 선택하세요</div>
+      <div><label for="nrs-note">추가 평가기록</label><textarea id="nrs-note" style="border:2px solid #000;min-height:90px"></textarea></div>
+      <div class="acts"><button class="btn blue" id="nrs-ok" type="button">저장</button></div></div></div>
+  <div class="dlg" id="win-flacc" hidden role="dialog" aria-label="FLACC Scale">
+    <div class="dh"><span>FLACC Scale</span><button type="button" data-close="win-flacc" aria-label="닫기">✕</button></div>
+    <div class="db"><table class="flacc" id="flacc-t" style="min-width:0"></table>
+      <div id="flacc-val" style="text-align:center">항목별 점수를 선택하세요</div>
+      <div><label for="flacc-note">추가 평가기록</label><textarea id="flacc-note" style="border:2px solid #000;min-height:90px"></textarea></div>
+      <div class="acts"><button class="btn blue" id="flacc-ok" type="button">저장</button></div></div></div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 :root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}
 
+
 /* Layout: 상단 회색 탭바(응급/외래/수술) + 환자등록. 외래=파란 EMR, 응급=청록+시안 서브탭, 수술=3단 하늘색. 라이트 고정 */
 :root{
   color-scheme:light;

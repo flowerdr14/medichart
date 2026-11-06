@@ -1,13 +1,20 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">  <link rel="stylesheet" href="style.css">
-</head><body>
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MediChart</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%22300%2040%201020%201500%22%3E%3Cpath%20fill%3D%22%23808080%22%20fill-rule%3D%22evenodd%22%20d%3D%22M808%2085C600%20370%20340%20760%20340%201025A468%20468%200%200%200%201277%201025C1277%20760%201010%20370%20808%2085ZM808%20258C640%20500%20438%20830%20438%201025A370%20370%200%200%200%201177%201025C1177%20830%20975%20500%20808%20258Z%22%2F%3E%3Cpath%20fill%3D%22%23808080%22%20d%3D%22M741%20897h134v104h104v134H875v105H741V1135H637V1001h104z%22%2F%3E%3C%2Fsvg%3E">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
-
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
 
 <div class="window">
+  <div class="menubar" id="menubar" role="menubar" aria-label="상단 메뉴"></div>
+  <div class="qtabs" id="qtabs" role="tablist" aria-label="화면 탭"></div>
   <div class="nav" role="tablist" aria-label="기록 구분">
-    <span class="brand"><svg class="logo" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="300 40 1020 1500"><path fill="currentColor" fill-rule="evenodd" d="M808 85C600 370 340 760 340 1025A468 468 0 0 0 1277 1025C1277 760 1010 370 808 85ZM808 258C640 500 438 830 438 1025A370 370 0 0 0 1177 1025C1177 830 975 500 808 258Z"/><path fill="currentColor" d="M741 897h134v104h104v134H875v105H741V1135H637V1001h104z"/></svg>MediChart</span>
+    <span class="brand"><svg class="logo" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="300 40 1020 1500"><path fill="currentColor" fill-rule="evenodd" d="M808 85C600 370 340 760 340 1025A468 468 0 0 0 1277 1025C1277 760 1010 370 808 85ZM808 258C640 500 438 830 438 1025A370 370 0 0 0 1177 1025C1177 830 975 500 808 258Z"/><path fill="currentColor" d="M741 897h134v104h104v134H875v105H741V1135H637V1001h104z"/></svg>MediChart<span id="brand-hosp" class="brand-h"></span></span>
     <button class="nt" role="tab" data-mod="er" aria-selected="false" type="button">응급기록</button>
     <button class="nt" role="tab" data-mod="opd" aria-selected="true" type="button">외래기록</button>
     <button class="nt" role="tab" data-mod="op" aria-selected="false" type="button">수술기록</button>
@@ -248,6 +255,7 @@
           <div class="rowf"><label for="op-date">수술일 :</label><input id="op-date" type="date" class="ul"></div>
           <div class="rowf"><label for="op-dept">진료과 :</label><select id="op-dept" class="ul"></select></div>
           <div class="rowf"><label for="op-surgeon">집도의 :</label><input id="op-surgeon" class="ul" autocomplete="off"></div>
+          <div class="rowf"><label for="op-resident">전공의 :</label><input id="op-resident" class="ul" autocomplete="off"></div>
           <div class="rowf"><label for="op-assist">보조의 :</label><input id="op-assist" class="ul" autocomplete="off"></div>
           <div class="rowf"><label for="op-anes">마취방법 :</label><select id="op-anes" class="ul"><option value=""></option><option>전신마취</option><option>척추마취</option><option>경막외마취</option><option>국소마취</option><option>수면마취</option><option>기타</option></select></div>
           <div class="rowf"><label for="op-spec">검체구분 :</label><select id="op-spec" class="ul"><option value=""></option><option>검체일반</option><option>검체판독</option><option>환자검사</option></select></div>
@@ -261,6 +269,8 @@
           <div class="rowf"><label for="op-special">특이사항:</label><textarea id="op-special"></textarea></div>
           <div class="sec">수술과정</div>
           <div class="rowf"><label for="op-process">내용:</label><textarea id="op-process"></textarea></div>
+          <div class="sec">수술 서식</div>
+          <div class="fm-open"><button class="btn blue" id="fm-open" type="button">수술 서식 열기</button><span class="muted" id="fm-sum"></span></div>
           <div class="opm-foot" style="margin-top:auto;padding-top:10px"><button class="skybtn lt" id="op-del" type="button">삭 제</button></div>
         </div>
       </section>
@@ -274,9 +284,83 @@
       </aside>
     </div>
   </div>
+  <div class="mod pg" id="mod-bill" hidden></div>
+  <div class="mod pg" id="mod-adm" hidden></div>
+  <div class="mod pg" id="mod-inp" hidden></div>
+  <div class="mod pg" id="mod-lab" hidden></div>
+  <div class="mod pg" id="mod-vit" hidden></div>
+  <div class="mod pg" id="mod-tpr" hidden></div>
+  <div class="mod pg" id="mod-doc" hidden></div>
+  <div class="mod" id="mod-home"><div class="empty" style="margin:auto;font-size:16px">위쪽 탭에서 사용할 화면을 선택하세요.</div></div>
 </div>
 
 <!-- ===== 팝업들 ===== -->
+<div class="ov" id="ov-win" hidden><div class="dlg wide blue" id="dlg-win" role="dialog" aria-label="창" hidden>
+  <div class="dh"><span id="win-title"></span><button type="button" data-close="dlg-win" aria-label="닫기">✕</button></div>
+  <div class="db" id="win-body"></div></div></div>
+<div class="ov" id="ov-fm" hidden><div class="dlg xfm blue" id="dlg-fm" role="dialog" aria-label="수술 서식" hidden>
+  <div class="dh"><span>수술 서식</span><button type="button" data-close="dlg-fm" aria-label="닫기">✕</button></div>
+  <div class="db" style="padding:0">
+          <div class="fm">
+            <div class="fm-title"><span id="fm-name" class="empty">수술명 미입력</span><span aria-hidden="true">•</span></div>
+            <div class="fm-staff"><span class="tag">집도의</span><span class="tag nm" id="fm-surgeon">-</span><span aria-hidden="true">/</span><span class="tag">전공의</span><span class="tag nm" id="fm-resident">-</span></div>
+            <div class="fm-bar" role="toolbar" aria-label="서식 도구"><span class="chev" aria-hidden="true">❯</span>
+              <button type="button" data-fm="form">서식</button><i aria-hidden="true">•</i><button type="button" data-fm="memo">메모</button><i aria-hidden="true">•</i><button type="button" data-fm="draw">수술그림</button><i aria-hidden="true">•</i><button type="button" data-fm="temp">임시저장</button><i aria-hidden="true">•</i><button type="button" data-fm="del">삭제</button></div>
+            <div class="fm-fields" id="fm-fields">
+              <div class="fc full"><label for="op-organ1">장기명</label><input id="op-organ1" type="text" autocomplete="off"><input id="op-organ2" type="text" autocomplete="off" aria-label="장기명 2"></div>
+              <div class="fc"><label for="op-clamp">혈관 클램프 시간 -</label><input id="op-clamp" type="time"></div>
+              <div class="fc"><label for="op-apply">적용시간 -</label><input id="op-apply" type="time"></div>
+              <div class="fc"><label for="op-anes-t">마취시간 -</label><input id="op-anes-t" type="time"></div>
+              <div class="fc"><label for="op-cold1">냉장보관시간 -</label><input id="op-cold1" type="time"></div>
+              <div class="fc"><label for="op-blood-t">혈액검사 : 채혈시간 -</label><input id="op-blood-t" type="time"></div>
+              <div class="fc"><label for="op-cold2">냉장보관시간 -</label><input id="op-cold2" type="time"></div>
+              <div class="fc full"><label for="op-loss">혈액 손실량 : (</label><input id="op-loss" type="text" inputmode="decimal" style="flex:0 1 130px"><span>mg )</span></div>
+              <div class="fc full"><span>봉합과 사용</span><button class="btn-ok" id="op-sut-ok" type="button">확인</button>
+                <label class="ck"><input type="checkbox" id="op-sut-n">Normal</label><label class="ck"><input type="checkbox" id="op-sut-p">plenty</label><label class="ck"><input type="checkbox" id="op-sut-l">less</label><span class="meta" id="sut-ok-t"></span></div>
+              <div class="fc full"><input id="op-sut-memo" type="text" aria-label="봉합과 사용 메모" autocomplete="off"></div>
+            </div>
+            <div class="sk-open"><button class="btn blue" id="sk-open" type="button">수술 그림 열기</button><canvas id="sk-thumb" width="360" height="220" aria-label="수술 그림 미리보기"></canvas><span id="sk-thumb-note" class="muted"></span></div>
+          </div>
+    <div class="acts" style="padding:0 10px 10px"><button class="btn" type="button" data-close="dlg-fm">닫기</button><button class="btn blue" id="fm-save" type="button">작 성 (저장)</button></div>
+  </div></div></div>
+<div class="ov" id="ov-sk" hidden><div class="dlg xsk blue" id="dlg-sk" role="dialog" aria-label="수술 그림" hidden>
+  <div class="dh"><span>수술 그림</span><button type="button" data-close="dlg-sk" aria-label="닫기">✕</button></div>
+  <div class="db" style="padding:0">
+            <div class="dw" id="fm-draw">
+              <div class="dw-title"><span>Setting</span><span class="bar"></span><span>Tool</span><span class="bar"></span></div>
+              <div class="dw-tools" id="sk-tools" role="toolbar" aria-label="그림 도구">
+                <button class="ac" id="sk-undo" type="button" title="되돌리기" aria-label="되돌리기" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+                <button class="ac" id="sk-redo" type="button" title="다시 실행" aria-label="다시 실행" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 14l5-5-5-5M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
+                <button class="tl" data-tool="mark" aria-pressed="false" type="button" title="표시(+)" aria-label="표시"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2 7 7 2-7 2-2 7-2-7-7-2 7-2z"/></svg></button>
+                <button class="tl" data-tool="erase" aria-pressed="false" type="button" title="지우개 (누른 도형 삭제)" aria-label="지우개" style="color:#e0605a"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l9-10 8 7-6 6H8z"/><path d="M8 20h12"/></svg></button>
+                <span class="gap"></span>
+                <button class="tl" data-tool="line" aria-pressed="false" type="button" title="직선" aria-label="직선"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l8 14M11 5l8 14"/></svg></button>
+                <button class="tl" data-tool="rect" aria-pressed="false" type="button" title="사각형" aria-label="사각형" style="color:#444"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" class="fill"/></svg></button>
+                <button class="tl" data-tool="ellipse" aria-pressed="false" type="button" title="원·타원" aria-label="원" style="color:#444"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" class="fill"/></svg></button>
+                <button class="tl" data-tool="text" aria-pressed="false" type="button" title="글자 넣기" aria-label="글자" style="color:#444"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19L12 4l7 15M8 14h8"/></svg></button>
+                <span class="gap"></span>
+                <button class="tl" data-tool="pen" aria-pressed="true" type="button" title="펜 (자유 곡선)" aria-label="펜"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l3-1L19 7l-3-3L4 16z"/><path d="M14 6l3 3"/></svg></button>
+                <button class="ac" id="sk-setbtn" type="button" title="설정 (색·굵기·도안)" aria-label="설정"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11l7-7 7 7-7 7z"/><path d="M19 15c1 1.5 1.5 2.5 1.5 3.5a1.5 1.5 0 0 1-3 0c0-1 .5-2 1.5-3.5z"/></svg></button>
+                <button class="tl" data-tool="star" aria-pressed="false" type="button" title="별 표시" aria-label="별 표시"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="12,3 14.6,9 21,9.5 16,14 17.6,20.5 12,17 6.4,20.5 8,14 3,9.5 9.4,9" style="fill:#f2b705;stroke:#d99b00"/></svg></button>
+                <button class="tl" data-tool="move" aria-pressed="false" type="button" title="이동 (도형을 끌어서 옮김)" aria-label="이동"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 12V6a1.5 1.5 0 0 1 3 0v5M11 11V4.5a1.5 1.5 0 0 1 3 0V11M14 11V6a1.5 1.5 0 0 1 3 0v8c0 4-2 6-5 6-3 0-4-1.5-6-5l-1.5-3a1.5 1.5 0 0 1 2.5-1.5L8 14"/></svg></button>
+                <button class="ac" id="sk-zoom-btn" type="button" title="확대 (100% → 150% → 200%)" aria-label="확대"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="M15 15l6 6"/></svg></button><span class="zl" id="sk-zoom">100%</span>
+              </div>
+              <div class="dw-set" id="sk-set">
+                <button class="sk-sw" data-color="#111111" style="background:#111111" aria-pressed="true" aria-label="검정" type="button"></button>
+                <button class="sk-sw" data-color="#d02a1b" style="background:#d02a1b" aria-pressed="false" aria-label="빨강" type="button"></button>
+                <button class="sk-sw" data-color="#1c5fae" style="background:#1c5fae" aria-pressed="false" aria-label="파랑" type="button"></button>
+                <button class="sk-sw" data-color="#2e9d57" style="background:#2e9d57" aria-pressed="false" aria-label="초록" type="button"></button>
+                <button class="sk-sw" data-color="#e08a00" style="background:#e08a00" aria-pressed="false" aria-label="주황" type="button"></button>
+                <select id="sk-w" aria-label="굵기"><option value="2">가늘게</option><option value="4" selected>보통</option><option value="7">굵게</option></select>
+                <select id="sk-tpl" aria-label="바탕 도안"><option value="">도안 없음</option><option value="uterus">자궁·난관·난소</option><option value="abdomen">복부 9분할(포트 위치)</option><option value="grid">격자</option></select>
+                <button class="btn2" id="sk-clear" type="button">전체 지우기</button>
+              </div>
+              <div class="sk-wrap" id="sk-wrap"><canvas id="sk-cv" width="720" height="440" aria-label="수술 참고 그림 그리기 영역"></canvas><input id="sk-txt" aria-label="입력할 글자" autocomplete="off"></div>
+              <div class="sk-hint">상단 <b>작 성</b> 또는 위의 <b>임시저장</b>을 눌러야 서식과 그림이 저장됩니다.</div>
+            </div>
+    <div class="acts" style="padding:0 10px 10px"><button class="btn" type="button" data-close="dlg-sk">닫기</button><button class="btn blue" id="sk-save" type="button">작 성 (저장)</button></div>
+  </div></div></div>
+
 <div class="ov" id="ov-pt" hidden><div class="dlg wide" id="dlg-pt" role="dialog" aria-label="환자등록">
   <div class="dh"><span>환자등록</span><button type="button" data-close="dlg-pt" aria-label="닫기">✕</button></div>
   <div class="db">
@@ -345,7 +429,6 @@
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-
-
-  <script src="script.js"></script>
-</body></html>
+<script src="script.js"></script>
+</body>
+</html>

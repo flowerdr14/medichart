@@ -221,16 +221,16 @@
   var erCur=null,erTab='img';
   fillSel($('er-dept'),DEPTS);
   function epsOf(){return cur?S.er.filter(function(e){return e.chart===cur.chart}).sort(function(a,b){return (a.date+a.time)<(b.date+b.time)?1:-1}):[]}
-  function newEp(date){var n=new Date(),labs=[];for(var i=0;i<10;i++)labs.push({});
-    return {id:S.nextId++,chart:cur.chart,date:date,time:p2(n.getHours())+':'+p2(n.getMinutes()),arrive:'',dept:'응급의학과',labs:labs,labExtra:'',rx:[],vs:{},proc:'',final:'',finalNote:'',exam:'',gcs:{},hx:{alg:cur.alg||''},pain:[],death:null}}
-  function addEpisode(date,silent){
+  function newEp(date,tm){var n=new Date(),labs=[];for(var i=0;i<10;i++)labs.push({});
+    return {id:S.nextId++,chart:cur.chart,date:date,time:tm||p2(n.getHours())+':'+p2(n.getMinutes()),arrive:'',dept:'응급의학과',labs:labs,labExtra:'',rx:[],vs:{},proc:'',final:'',finalNote:'',exam:'',gcs:{},hx:{alg:cur.alg||''},pain:[],death:null}}
+  function addEpisode(date,silent,tm){
     if(!cur){toast('먼저 환자를 선택하세요');return}
-    var e=newEp(date);S.er.push(e);erCur=e;persist();renderErAll();if(!silent)toast('접수이력을 추가했습니다');
+    var e=newEp(date,tm);S.er.push(e);erCur=e;ecPick=date;var dd=new Date(date+'T00:00:00');ecY=dd.getFullYear();ecM=dd.getMonth();persist();renderErAll();if(!silent)toast(cur.name+' 응급 접수 ('+date+' '+e.time+')');
   }
   $('er-find').onclick=function(){hitsFor($('er-q').value,$('er-hits'),function(p){erCur=null;pickPatient(p.chart)})};
   $('er-q').addEventListener('keydown',function(e){if(e.key==='Enter')$('er-find').onclick()});
-  $('er-add').onclick=function(){if(!cur){toast('먼저 환자를 검색하세요');return}$('er-adddate').value=TODAY;$('er-addrow').hidden=false;$('er-adddate').focus()};
-  $('er-addok').onclick=function(){var d=$('er-adddate').value||TODAY;$('er-addrow').hidden=true;addEpisode(d)};
+  $('er-add').onclick=function(){if(!cur){toast('먼저 환자를 검색하세요');return}var n=new Date();$('er-adddate').value=ecPick;$('er-addtime').value=p2(n.getHours())+':'+p2(n.getMinutes());$('er-addrow').hidden=false;$('er-addtime').focus()};
+  $('er-addok').onclick=function(){var d=$('er-adddate').value||TODAY;$('er-addrow').hidden=true;addEpisode(d,false,$('er-addtime').value||'')};
   document.querySelectorAll('.st').forEach(function(b){b.onclick=function(){erTab=b.getAttribute('data-er');renderErAll()}});
 
   function bPath(ep,path){var a=path.split('.'),o=ep;for(var i=0;i<a.length-1;i++){o=o[a[i]]=o[a[i]]||{}}return {o:o,k:a[a.length-1]}}
@@ -238,7 +238,7 @@
   binds.forEach(function(el){el.addEventListener('input',function(){if(!erCur)return;var r=bPath(erCur,el.getAttribute('data-b'));r.o[r.k]=el.value;persistSoon();if(el.getAttribute('data-b')==='arrive')renderErList()});el.addEventListener('change',function(){if(!erCur)return;var r=bPath(erCur,el.getAttribute('data-b'));r.o[r.k]=el.value;persistSoon()})});
   $('er-blood').onchange=function(){if(cur){cur.blood=$('er-blood').value;persistSoon();$('f-blood').value=cur.blood}};
 
-  function renderErList(){
+  function renderErList(){ecRender();
     var box=$('er-list');box.innerHTML='';
     if(!cur){box.innerHTML='<div class="empty">환자를 검색하거나 + 환자등록으로 등록하세요.</div>';return}
     var eps=epsOf();if(!eps.length){box.innerHTML='<div class="empty">접수이력이 없습니다.</div>';return}
@@ -265,6 +265,33 @@
     renderErImg();renderLab();renderRx();renderGcs();renderPainSum();
     $('er-death').textContent=erCur&&erCur.death?'사망진단서 (작성됨)':'사망진단서';
   }
+
+  
+  /* 응급 달력 · 날짜별 내원 현황 */
+  var ecY=today.getFullYear(),ecM=today.getMonth(),ecPick=TODAY;
+  function ecRender(){
+    var c=$('ec-cal');if(!c)return;c.innerHTML='';
+    ['일','월','화','수','목','금','토'].forEach(function(d){var e=document.createElement('div');e.className='dow';e.textContent=d;c.appendChild(e)});
+    $('ec-title').textContent=ecY+' '+p2(ecM+1);
+    var start=new Date(ecY,ecM,1-new Date(ecY,ecM,1).getDay()),cnt={};
+    S.er.forEach(function(e){cnt[e.date]=(cnt[e.date]||0)+1});
+    for(var i=0;i<42;i++){
+      var d=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i),k=ymd(d),e=document.createElement('div');
+      e.className='d'+(d.getMonth()!==ecM?' out':'')+(d.getDay()===0?' sun':'')+(k===TODAY?' today':'')+(k===ecPick?' pick':'');
+      e.textContent=p2(d.getDate());e.tabIndex=0;if(cnt[k]){var dot=document.createElement('span');dot.className='dot';e.appendChild(dot);e.title='응급 내원 '+cnt[k]+'명'}
+      (function(k,d){var go=function(){ecPick=k;ecY=d.getFullYear();ecM=d.getMonth();ecRender()};e.onclick=go;e.onkeydown=function(ev){if(ev.key==='Enter')go()}})(k,d);
+      c.appendChild(e);
+    }
+    var eps=S.er.filter(function(e){return e.date===ecPick&&pt(e.chart)}).sort(function(a,b){return a.time<b.time?-1:a.time>b.time?1:a.id-b.id}),box=$('ec-day');
+    $('ec-th').textContent='내원 현황 '+ecPick+' ('+eps.length+'명)';box.innerHTML='';
+    eps.forEach(function(e){var p=pt(e.chart),b=document.createElement('button');b.type='button';b.className='ep';b.setAttribute('aria-pressed',String(!!erCur&&erCur.id===e.id));
+      b.textContent=e.time+' '+p.name+' ('+p.sex+'/'+age(p.birth)+') '+p.chart+(e.arrive?' · '+e.arrive:'')+(e.final?' · '+e.final:'');
+      b.onclick=function(){pickPatient(p.chart);erCur=e;renderErAll()};box.appendChild(b)});
+    if(!eps.length)box.innerHTML='<div class="empty">이 날짜의 응급 내원이 없습니다.</div>';
+  }
+  $('ec-prev').onclick=function(){ecM--;if(ecM<0){ecM=11;ecY--}ecRender()};
+  $('ec-next').onclick=function(){ecM++;if(ecM>11){ecM=0;ecY++}ecRender()};
+  $('ec-today').onclick=function(){ecPick=TODAY;ecY=today.getFullYear();ecM=today.getMonth();ecRender()};
 
   /* 영상검사 (환자 단위, 수술기록과 공유) */
   function imgsOf(){return cur?S.imaging.filter(function(i){return i.chart===cur.chart}).sort(function(a,b){return a.dt<b.dt?1:-1}):[]}
@@ -1417,22 +1444,25 @@
   }
   function dcList(){
     var el=$('dc-list');if(!el)return;el.innerHTML='';
-    var rows=cur?S.docs.filter(function(d){return d.chart===cur.chart}).sort(function(a,b){return a.dt<b.dt?1:-1}):[];
+    var rows=S.docs.filter(function(d){return !cur||!d.chart||d.chart===cur.chart}).sort(function(a,b){return a.dt<b.dt?1:-1});
     rows.forEach(function(r){var b=document.createElement('button');b.type='button';b.className='dc-li';if(r.id===DC.id)b.setAttribute('aria-current','true');
-      b.innerHTML='<b></b><span></span>';b.firstChild.textContent=r.title;b.lastChild.textContent=r.dt.slice(0,10).replace(/-/g,'.')+' · '+r.pages.length+'쪽';
+      b.innerHTML='<b></b><span></span>';b.firstChild.textContent=r.title;var pp=r.chart?pt(r.chart):null;b.lastChild.textContent=r.dt.slice(0,10).replace(/-/g,'.')+' · '+r.pages.length+'쪽 · '+(r.chart?(pp?pp.name:'(삭제된 환자)'):'환자 미지정');
       b.onclick=function(){dcGuard('load'+r.id,function(){dcLoad(r)})};el.appendChild(b)});
-    if(!rows.length)el.innerHTML='<div class="muted" style="padding:4px">'+(cur?'이 환자의 저장된 문서가 없습니다.':'환자를 선택하면 저장된 문서가 표시됩니다.')+'</div>';
+    if(!rows.length)el.innerHTML='<div class="muted" style="padding:4px">'+(cur?'이 환자의 저장된 문서가 없습니다.':'저장된 문서가 없습니다.')+'</div>';
   }
-  function dcSave(){
+  function dcSave(asNew){
     var title=$('dc-title').value.trim();
     if(!title){toast('제목을 입력하세요');$('dc-title').focus();return}
-    needPt(function(p){
-      DC.pages[DC.pi]=$('dp').innerHTML;
-      var r=DC.id&&dcRec(DC.id);if(r&&r.chart!==p.chart)r=null;
-      var o={id:r?r.id:S.nextId++,chart:p.chart,title:title,content:$('dc-content').value.trim(),tpl:DC.tpl,pages:DC.pages.map(dcSan),dt:nowLocal()};
-      if(r)S.docs[S.docs.indexOf(r)]=o;else S.docs.push(o);
-      DC.id=o.id;persist()||toast('브라우저 저장 공간이 부족합니다. 백업을 받고 오래된 문서를 정리하세요');DC.dirty=false;$('dc-dirty').hidden=true;dcList();toast(p.name+' 환자 문서로 저장했습니다');
-    });
+    DC.pages[DC.pi]=$('dp').innerHTML;
+    var r=!asNew&&DC.id?dcRec(DC.id):null;
+    if(asNew&&DC.id){var o0=dcRec(DC.id);if(o0&&o0.title===title){title+=' (복사)';$('dc-title').value=title}}
+    if(r&&r.title!==title)r=null;/* 제목을 바꾸면 별도의 새 문서로 저장 */
+    if(r&&cur&&r.chart&&r.chart!==cur.chart)r=null;
+    var chart=cur?cur.chart:(r?r.chart:'');
+    var o={id:r?r.id:S.nextId++,chart:chart,title:title,content:$('dc-content').value.trim(),tpl:DC.tpl,pages:DC.pages.map(dcSan),dt:nowLocal()};
+    if(r)S.docs[S.docs.indexOf(r)]=o;else S.docs.push(o);
+    DC.id=o.id;persist()||toast('브라우저 저장 공간이 부족합니다. 백업을 받고 오래된 문서를 정리하세요');DC.dirty=false;$('dc-dirty').hidden=true;dcList();
+    toast(chart?(pt(chart)?pt(chart).name+' 환자 문서로 ':'')+(r?'저장했습니다':'새로 저장했습니다'):'문서를 '+(r?'저장했습니다':'새로 저장했습니다')+' (환자 미지정)');
   }
   function dcDelDoc(){
     var r=DC.id&&dcRec(DC.id);
@@ -1512,7 +1542,7 @@
         '<div class="dc-row"><button type="button" data-dc="l" title="왼쪽 정렬">좌</button><button type="button" data-dc="c" title="가운데 정렬">중</button><button type="button" data-dc="r" title="오른쪽 정렬">우</button><button type="button" data-dc="j" title="양쪽 정렬">양</button><select id="dc-cols" aria-label="단" style="width:70px"><option value="1">1단</option><option value="2">2단</option><option value="3">3단</option></select></div>'+
         '<div class="dc-row"><span>텍스트 방향</span><select id="dc-wm" aria-label="텍스트 방향"><option value="h">가로</option><option value="v">세로</option></select></div>'+
         '<div class="dc-row"><span>텍스트 맞춤</span><select id="dc-va" aria-label="텍스트 맞춤"><option value="flex-start">위</option><option value="center">가운데</option><option value="flex-end">아래</option></select></div>'+
-        '<button type="button" class="dcb dcb-g" id="dc-save">저장</button><button type="button" class="dcb dcb-r" id="dc-del">삭제</button><button type="button" class="dcb dcb-b" id="dc-print">인쇄</button><button type="button" class="dcb dcb-y" id="dc-new">새로작성</button>'+
+        '<button type="button" class="dcb dcb-g" id="dc-save">저장</button><button type="button" class="dcb dcb-r" id="dc-del">삭제</button><button type="button" class="dcb dcb-b" id="dc-print">인쇄</button><button type="button" class="dcb dcb-y" id="dc-new">새로작성</button><button type="button" class="dcb dcb-s" id="dc-saveas" title="지금 내용을 별도의 새 문서로 저장">다른 문서로 저장</button>'+
       '</div></aside>'+
     '</div>'+
     '<div class="dc-bar"><button type="button" class="dc-ar" id="dc-prev" aria-label="이전 쪽">◀</button><input id="dc-pg" inputmode="numeric" aria-label="쪽 번호" style="width:52px;text-align:center"><span>/ <b id="dc-tot">1</b></span><button type="button" class="dc-ar" id="dc-next" aria-label="다음 쪽">▶</button><button type="button" class="dc-ar" id="dc-refresh" title="저장된 상태로 다시 불러오기" aria-label="다시 불러오기">↻</button>'+
@@ -1535,7 +1565,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('.dc-pc'),function(b){b.onclick=function(){DC.pen=b.getAttribute('data-pc');dcSetTool('pen')}});
     $('dc-tplsel').onchange=function(){var v=this.value;this.value='';if(v)dcApplyTpl(v)};
     $('dc-title').oninput=$('dc-content').oninput=function(){dcDirty()};
-    $('dc-save').onclick=dcSave;$('dc-del').onclick=dcDelDoc;$('dc-print').onclick=dcPrint;
+    $('dc-save').onclick=function(){dcSave(false)};$('dc-saveas').onclick=function(){dcSave(true)};$('dc-del').onclick=dcDelDoc;$('dc-print').onclick=dcPrint;
     $('dc-new').onclick=function(){dcGuard('new',function(){dcNewDoc();toast('새 문서입니다')})};
     $('dc-refresh').onclick=function(){dcGuard('refresh',function(){var r=DC.id&&dcRec(DC.id);if(r)dcLoad(r);else dcNewDoc();toast('다시 불러왔습니다')})};
     $('dc-prev').onclick=function(){dcGo(DC.pi-1)};$('dc-next').onclick=function(){dcGo(DC.pi+1)};
@@ -1561,8 +1591,8 @@
   }
   function xDocMod(){
     if(!DC.built)dcBuild();
-    if(DC.id){var r=dcRec(DC.id);if(!r||(cur&&r.chart!==cur.chart))DC.id=null}
-    $('dc-pt').innerHTML=ptLine();dcList();
+    if(DC.id){var r=dcRec(DC.id);if(!r||(cur&&r.chart&&r.chart!==cur.chart))DC.id=null}
+    $('dc-pt').innerHTML=cur?ptLine():'<span class="muted">환자 미지정 · 선택하지 않아도 작성·저장할 수 있습니다</span>';dcList();
     if(!DC.fitted){var w=$('dc-mid').clientWidth;if(w>200){DC.fitted=true;dcZoom(Math.min(100,Math.floor((w-110)/DC_W*10)*10))}}
   }
 

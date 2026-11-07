@@ -152,14 +152,18 @@
     </div>
     <div class="er">
       <aside class="er-left">
+        <div class="th">응급 달력</div>
+        <div class="ec-cal"><div class="cal-hd"><button id="ec-prev" type="button" aria-label="이전 달">◀</button><b id="ec-title"></b><button id="ec-next" type="button" aria-label="다음 달">▶</button></div><div class="cal" id="ec-cal"></div><div class="bd" style="padding:4px"><button class="btn sm" id="ec-today" type="button">오늘</button></div></div>
+        <div class="th" id="ec-th">내원 현황</div>
+        <div class="ec-day" id="ec-day"></div>
         <div class="th">접수이력</div>
         <div class="er-hist">
           <div class="er-find"><input id="er-q" type="search" placeholder="환자 검색(성명/차트번호)" autocomplete="off" aria-label="응급 환자 검색"><button class="btn sm" id="er-find" type="button">검색</button></div>
           <div class="hits" id="er-hits" style="padding:0"></div>
           <div id="er-list"></div>
           <div class="er-add">
-            <button class="tealbtn" id="er-add" type="button">달력추가</button>
-            <div id="er-addrow" hidden style="margin-top:6px;display:flex;gap:4px;justify-content:center"><input id="er-adddate" type="date" aria-label="접수 날짜" style="width:auto"><button class="btn sm" id="er-addok" type="button">추가</button></div>
+            <button class="tealbtn" id="er-add" type="button">응급 접수 추가</button>
+            <div id="er-addrow" hidden style="margin-top:6px;display:flex;gap:4px;justify-content:center"><input id="er-adddate" type="date" aria-label="내원 날짜" style="width:auto"><input id="er-addtime" type="time" aria-label="내원 시각" style="width:auto"><button class="btn sm" id="er-addok" type="button">추가</button></div>
           </div>
         </div>
         <div class="th">환자정보</div>

@@ -107,7 +107,8 @@
   function rxFill(i){if(!i)return;if(i.dept)$('r-dept').value=i.dept;$('r-doc').value=i.doc||'';if(i.type)$('r-type').value=i.type;$('r-memo').value=i.memo||'';
     var ks=i.kinds||['일반'];document.querySelectorAll('.kind').forEach(function(c){c.checked=ks.indexOf(c.value)>-1})}
   function rxMark(){var i=cur&&cur.rxInfo;$('rx-saved').textContent=i?('저장된 접수정보: '+(i.dept||'')+(i.doc?' · '+i.doc:'')):''}
-  function rxReset(){$('r-dept').value='내과';$('r-doc').value='';$('r-type').value='재진';$('r-memo').value='';document.querySelectorAll('.kind').forEach(function(c){c.checked=c.value==='일반'})}
+  function lgDef(d){return (typeof LG!=='undefined'&&LG&&LG.dept)||d}
+  function rxReset(){$('r-dept').value=lgDef('내과');$('r-doc').value='';$('r-type').value='재진';$('r-memo').value='';document.querySelectorAll('.kind').forEach(function(c){c.checked=c.value==='일반'})}
   if(S.rxDraft){delete S.rxDraft;persist()}
   $('btn-rxsave').onclick=function(){
     if(!cur){toast('먼저 환자를 검색하거나 환자 정보를 저장하세요');return}
@@ -411,7 +412,7 @@
     $('op-empty').hidden=rows.length>0;
   }
   function loadOp(s){
-    $('op-date').value=s?s.date:'';$('op-dept').value=s?s.dept:'외과';$('op-surgeon').value=s?s.surgeon:'';$('op-assist').value=s?s.assist:'';$('op-anes').value=s?s.anes:'';$('op-spec').value=s?s.spec:'';
+    $('op-date').value=s?s.date:'';$('op-dept').value=s?s.dept:lgDef('외과');$('op-surgeon').value=s?s.surgeon:'';$('op-assist').value=s?s.assist:'';$('op-anes').value=s?s.anes:'';$('op-spec').value=s?s.spec:'';
     $('op-pre').value=s?s.pre:'';$('op-post').value=s?s.post:'';$('op-name').value=s?s.name:'';$('op-special').value=s?s.special:'';$('op-process').value=s?s.process:'';
     $('op-fav').checked=!!(s&&s.fav);$('op-bm').checked=!!(s&&s.bm);$('op-wdate').value=s?s.wdate:TODAY;skLoad(s?(s.sketch||{tpl:'',shapes:[]}):null);opFormLoad(s);
   }
@@ -615,7 +616,7 @@
   var ST={bill:{from:TODAY.slice(0,8)+'01',to:TODAY,type:'',status:'',q:''},adm:{state:'현재입원',ward:'',q:'',sel:null},inp:{ward:'',q:'',sel:null},lab:{grp:'',item:'',sel:null},vit:{series:'bt'},tpr:{start:ymd(new Date(today.getFullYear(),today.getMonth(),today.getDate()-6))}};
   var menuOpen=false,BILL_ST=['미청구','청구','수납완료'];
   function normS(){
-    ['patients','visits','appts','er','surg','imaging','admissions','nursing','vitals','labs','ltc','staff','wards','docs'].forEach(function(k){if(!Array.isArray(S[k]))S[k]=[]});
+    ['patients','visits','appts','er','surg','imaging','admissions','nursing','vitals','labs','ltc','staff','wards','docs','users'].forEach(function(k){if(!Array.isArray(S[k]))S[k]=[]});
     if(!S.notes||typeof S.notes!=='object')S.notes={};if(!S.claims||typeof S.claims!=='object')S.claims={};
     if(!S.settings||typeof S.settings!=='object')S.settings={};
     if(!S.settings.fees)S.settings.fees={};if(!S.settings.rates)S.settings.rates={};if(!S.settings.hospital)S.settings.hospital={name:'',tel:'',addr:''};
@@ -704,7 +705,7 @@
 
   /* ---------- 메뉴바 / 바로가기 탭 ---------- */
   var MENUS=[
-    ['환경설정',[['병원 정보','set-hosp'],['수가·본인부담 설정','set-fee'],['화면 배율','set-zoom'],['-'],['데이터 백업 (내보내기)','backup'],['데이터 복원 (가져오기)','restore'],['-'],['전체 데이터 초기화','reset']]],
+    ['환경설정',[['병원 정보','set-hosp'],['수가·본인부담 설정','set-fee'],['화면 배율','set-zoom'],['비밀번호 변경','pw'],['-'],['데이터 백업 (내보내기)','backup'],['데이터 복원 (가져오기)','restore'],['-'],['전체 데이터 초기화','reset'],['-'],['로그아웃','logout']]],
     ['자료등록/관리',[['환자 등록','pt-new'],['환자 목록 관리','pt-list'],['-'],['의료진 관리','staff'],['병동·병상 관리','ward']]],
     ['진료/간호기록',[['외래기록','go-opd'],['응급기록','go-er'],['수술기록','go-op'],['-'],['간호기록','nursing'],['경과기록','progress'],['-'],['문서작성','go-doc']]],
     ['입원/퇴원기록',[['입원 등록','adm-new'],['퇴원 처리','adm-dis'],['병상 이동 (전실)','adm-move'],['-'],['입퇴원 이력','adm-hist']]],
@@ -737,6 +738,7 @@
   }
   document.addEventListener('click',closeMenus);
   document.addEventListener('keydown',function(e){
+    if(document.body.classList.contains('locked'))return;
     if(e.key==='Escape')closeMenus();
     else if(e.key==='F1'){e.preventDefault();hGuide()}
     else if(e.key==='F2'){e.preventDefault();pickPt(function(p){pickPatient(p.chart)})}
@@ -750,7 +752,7 @@
     var map={
       'set-hosp':xSetHosp,'set-fee':xSetFee,'set-zoom':xSetZoom,'backup':xBackup,'restore':xRestore,'reset':xReset,
       'pt-new':function(){$('btn-reg').click()},'pt-list':xPtList,'staff':xStaff,'ward':xWard,
-      'go-opd':go('opd'),'go-doc':go('doc'),'go-er':go('er'),'go-op':go('op'),'nursing':function(){xNursing('간호')},'progress':function(){xNursing('경과')},
+      'go-opd':go('opd'),'go-doc':go('doc'),'pw':lgPw,'logout':lgLogout,'go-er':go('er'),'go-op':go('op'),'nursing':function(){xNursing('간호')},'progress':function(){xNursing('경과')},
       'adm-new':function(){admNew()},'adm-dis':function(){admDis()},'adm-move':function(){admMove()},'adm-hist':function(){ST.adm.state='전체';showMod('adm')},
       'ltc-B':function(){xLtc('B')},'ltc-R':function(){xLtc('R')},'ltc-M':function(){xLtc('M')},'ltc-H':function(){xLtc('H')},
       'q-pt':xQPatient,'q-visit':xQVisit,'q-stat':xQStat,'go-adm':go('adm'),'go-lab':go('lab'),'go-bill':go('bill'),
@@ -788,7 +790,7 @@
     },'wide blue');
   }
   function xBackup(){
-    var txt=JSON.stringify(S);
+    var bk={};Object.keys(S).forEach(function(k){if(k!=='users')bk[k]=S[k]});var txt=JSON.stringify(bk);
     xwin('데이터 백업','<p class="muted" style="margin:0">모든 환자·기록·설정이 들어 있는 JSON입니다. 파일로 저장하거나 복사해서 보관하세요. 환자 정보가 들어 있으니 안전한 곳에만 두세요.</p><textarea id="bk-t" readonly style="min-height:180px;font-family:var(--mono)"></textarea><div class="acts"><button class="btn xc" type="button">닫기</button><button class="btn" id="bk-copy" type="button">복사</button><button class="btn blue" id="bk-dl" type="button">파일로 저장</button></div>',function(){
       $('bk-t').value=txt.length>300000?'(데이터가 커서 미리보기를 생략했습니다. 파일로 저장을 사용하세요)':txt;
       $('bk-copy').onclick=function(){copyText(txt,$('bk-t'))};
@@ -807,14 +809,14 @@
         var o;try{o=JSON.parse($('rs-t').value)}catch(e){toast('JSON 형식이 올바르지 않습니다');return}
         if(!o||!Array.isArray(o.patients)){toast('MediChart 백업 파일이 아닙니다');return}
         if(!armed){armed=true;$('rs-ok').textContent='한 번 더 누르면 교체';return}
-        applyState(o);xclose();toast('데이터를 복원했습니다 (환자 '+o.patients.length+'명)');
+        o.users=S.users;applyState(o);xclose();toast('데이터를 복원했습니다 (환자 '+o.patients.length+'명)');
       };
     },'wide blue');
   }
   function xReset(){
     xwin('전체 데이터 초기화','<p style="margin:0;color:var(--red);font-weight:700">환자, 접수, 기록, 입원, 설정이 모두 삭제되며 되돌릴 수 없습니다.</p><p class="muted" style="margin:0">계속하려면 아래 칸에 <b>초기화</b>라고 입력하세요. 필요하면 먼저 백업하세요.</p><input id="rt-c" autocomplete="off"><div class="acts"><button class="btn xc" type="button">닫기</button><button class="btn red" id="rt-ok" type="button" disabled>모두 삭제</button></div>',function(){
       $('rt-c').oninput=function(){$('rt-ok').disabled=$('rt-c').value.trim()!=='초기화'};
-      $('rt-ok').onclick=function(){applyState({patients:[]});xclose();toast('모든 데이터를 삭제했습니다')};
+      $('rt-ok').onclick=function(){applyState({patients:[],users:S.users});xclose();toast('모든 데이터를 삭제했습니다')};
     },'wide blue');
   }
 
@@ -1573,6 +1575,118 @@
   $('fm-open').onclick=fmOpen;$('fm-save').onclick=function(){$('op-save').click()};
   ['op-name','op-surgeon'].forEach(function(id){$(id).addEventListener('input',fmSum)});
   fmSum();
+
+  /* =================== 로그인 (이 브라우저 안에서만 확인) =================== */
+  var LG={user:null,mode:'login',fail:0,until:0};
+  var LG_ICON={
+    logo:'<svg class="lg-logo" viewBox="0 0 100 112" aria-hidden="true"><path d="M50 6C50 6 17 46 17 72a33 33 0 0 0 66 0C83 46 50 6 50 6z" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round"/><path d="M44 62h12v12h12v12H56v12H44V86H32V74h12z" fill="#fff"/></svg>',
+    user:'<svg viewBox="0 0 50 50" aria-hidden="true"><circle cx="25" cy="14" r="9" fill="none" stroke="#fff" stroke-width="2.5"/><path d="M5 46c0-10 8-15 20-15s20 5 20 15z" fill="none" stroke="#fff" stroke-width="2.5"/></svg>',
+    lock:'<svg viewBox="0 0 50 54" aria-hidden="true"><path d="M13 24V15a12 12 0 0 1 24 0v9" fill="none" stroke="#fff" stroke-width="2.5"/><rect x="6" y="24" width="38" height="27" rx="2" fill="none" stroke="#fff" stroke-width="2.5"/><circle cx="25" cy="35" r="3.5" fill="#fff"/><path d="M25 38v6" stroke="#fff" stroke-width="3"/></svg>'
+  };
+  var LG_DEPT={'IM':['내과','내과'],'GI':['내과','소화기내과'],'CV':['내과','순환기내과'],'C':['내과','순환기내과'],'Neph':['내과','신장내과'],'Endo':['내과','내분비내과'],'Hem-Onc':['내과','혈액종양내과'],'Inf':['내과','감염내과'],'NR':['신경과','신경과'],'NE':['신경과','신경과'],'GS':['외과','일반외과'],'OS':['정형외과','정형외과'],'NS':['신경외과','신경외과'],'CS':['흉부외과','심장혈관흉부외과'],'PS':['성형외과','성형외과'],'OB&GY':['산부인과','산부인과'],'OBGY':['산부인과','산부인과'],'PED':['소아청소년과','소아청소년과'],'PD':['소아청소년과','소아청소년과'],'PSY':['정신건강의학과','정신건강의학과'],'NP':['정신건강의학과','정신건강의학과'],'OPH':['안과','안과'],'ENT':['이비인후과','이비인후과'],'DER':['피부과','피부과'],'URO':['비뇨의학과','비뇨의학과'],'AN':['마취통증의학과','마취통증의학과'],'REHAB':['재활의학과','재활의학과'],'DENT':['치과','치과']};
+  function lgSetUser(id){
+    LG.user=id;var m=null;Object.keys(LG_DEPT).forEach(function(k){if(k.toLowerCase()===String(id).toLowerCase())m=LG_DEPT[k]});
+    LG.dept=m?m[0]:'';LG.label=m?m[1]:'';
+    function put(i,v){var e=$(i);if(e&&v&&Array.prototype.some.call(e.options,function(o){return o.value===v}))e.value=v}
+    put('r-dept',LG.dept);if(!opSel)put('op-dept',LG.dept);if(!erCur)put('er-dept',LG.dept);
+  }
+  function lgHex(b){return Array.prototype.map.call(new Uint8Array(b),function(x){return ('0'+x.toString(16)).slice(-2)}).join('')}
+  function lgSalt(){var a=new Uint8Array(12);if(window.crypto&&crypto.getRandomValues)crypto.getRandomValues(a);else for(var i=0;i<12;i++)a[i]=Math.floor(Math.random()*256);return lgHex(a)}
+  function lgFallback(s){
+    var h1=0xdeadbeef,h2=0x41c6ce57,r,i,c;
+    for(r=0;r<3000;r++)for(i=0;i<s.length;i++){c=s.charCodeAt(i);h1=Math.imul(h1^c,2654435761);h2=Math.imul(h2^c,1597334677)}
+    h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);
+    return (h2>>>0).toString(16)+(h1>>>0).toString(16);
+  }
+  /* alg: 's' = SHA-256, 'f' = 대체 방식. alg 를 비우면 가능한 방식을 고름. cb(hash, alg) — 확인할 수 없으면 cb(null) */
+  function lgHash(pw,salt,alg,cb){
+    var s=salt+':'+pw,sub=window.crypto&&crypto.subtle&&window.TextEncoder;
+    if(alg==='f'||(!alg&&!sub)){cb(lgFallback(s),'f');return}
+    if(!sub){cb(null);return}
+    try{crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)).then(function(b){cb(lgHex(b),'s')},function(){cb(alg?null:lgFallback(s),alg?null:'f')})}catch(e){cb(alg?null:lgFallback(s),alg?null:'f')}
+  }
+  function lgMsg(n,t){var b=$('lg-m'+n);if(b)b.textContent=t||''}
+  function lgClear(){lgMsg(1);lgMsg(2);lgMsg(3)}
+  function lgMode(m){
+    LG.mode=m;var c=m==='create';
+    $('lg-r3').hidden=!c;$('lg-m3').hidden=!c;
+    $('lg-pw').setAttribute('autocomplete',c?'new-password':'current-password');
+    $('lg-note').innerHTML=c?'처음 사용하는 브라우저입니다. 사용할 아이디와 비밀번호를 정하세요.':'';
+    lgClear();
+  }
+  function lgShow(){
+    var old=$('login');if(old)old.parentNode.removeChild(old);
+    var el=document.createElement('div');el.id='login';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','로그인');
+    el.innerHTML='<form class="lg-box" id="lg-form" novalidate><div class="lg-title">Medi Chart</div>'+LG_ICON.logo+
+      '<div class="lg-row"><span class="lg-ic">'+LG_ICON.user+'</span><span class="lg-colon">:</span><input id="lg-id" autocomplete="username" aria-label="아이디" placeholder="아이디" spellcheck="false"></div><div class="lg-bar" id="lg-m1" role="alert"></div>'+
+      '<div class="lg-row"><span class="lg-ic">'+LG_ICON.lock+'</span><span class="lg-colon">:</span><input id="lg-pw" type="password" autocomplete="current-password" aria-label="비밀번호" placeholder="비밀번호"></div><div class="lg-bar" id="lg-m2" role="alert"></div>'+
+      '<div class="lg-note" id="lg-note"></div></form>';
+    document.body.appendChild(el);document.body.classList.add('locked');
+    var w=document.querySelector('.window');if(w)w.inert=true;
+    Array.prototype.forEach.call(document.querySelectorAll('.ov'),function(o){o.hidden=true});closeMenus();
+    $('lg-form').onsubmit=function(e){e.preventDefault();lgSubmit()};
+    ['lg-id','lg-pw'].forEach(function(i){$(i).addEventListener('input',lgClear);$(i).addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();lgSubmit()}})});
+    $('lg-id').focus();
+  }
+  function lgDone(id){
+    lgSetUser(id);LG.fail=0;try{sessionStorage.setItem('mc-auth',id)}catch(e){}
+    var el=$('login');if(el)el.parentNode.removeChild(el);document.body.classList.remove('locked');
+    var w=document.querySelector('.window');if(w)w.inert=false;lgBar();
+  }
+  function lgBar(){
+    var b=$('mn-out');if(!b){b=document.createElement('button');b.type='button';b.id='mn-out';b.className='mn-b mn-out';b.onclick=lgLogout;$('menubar').appendChild(b)}
+    b.textContent=(LG.label?LG.label+' ('+LG.user+')':(LG.user||''))+' · 로그아웃';b.title='로그아웃';
+  }
+  function lgLogout(){try{sessionStorage.removeItem('mc-auth')}catch(e){}LG.user=null;lgShow()}
+  function lgSubmit(){
+    var id=$('lg-id').value.trim(),pw=$('lg-pw').value;lgClear();
+    if(!id){lgMsg(1,'아이디를 입력하세요');$('lg-id').focus();return}
+    if(!pw){lgMsg(2,'비밀번호를 입력하세요');$('lg-pw').focus();return}
+    if(LG.mode==='create'){
+      if(id.length<2){lgMsg(1,'아이디는 2자 이상으로 정하세요');return}
+      if(pw.length<4){lgMsg(2,'비밀번호는 4자 이상으로 정하세요');return}
+      if(pw!==$('lg-pw2').value){lgMsg(3,'비밀번호 확인이 다릅니다');$('lg-pw2').focus();return}
+      var salt=lgSalt();lgHash(pw,salt,'',function(h,alg){
+        S.users.push({id:id,salt:salt,hash:h,alg:alg});if(!persist()){S.users.pop();lgMsg(2,'브라우저 저장 공간에 쓸 수 없어 계정을 만들지 못했습니다');return}lgDone(id);toast('계정을 만들었습니다. 환영합니다');
+      });return;
+    }
+    if(Date.now()<LG.until){lgMsg(2,'시도가 너무 많습니다. 잠시 후 다시 시도하세요');return}
+    var u=S.users.filter(function(x){return x.id.toLowerCase()===id.toLowerCase()})[0];
+    function bad(){LG.fail++;if(LG.fail>=5){LG.until=Date.now()+30000;LG.fail=0;lgMsg(2,'5회 실패했습니다. 30초 후 다시 시도하세요')}else lgMsg(2,'아이디 또는 비밀번호가 맞지 않습니다')}
+    if(!u){lgHash(pw,'x','f',function(){bad()});return}
+    lgHash(pw,u.salt,u.alg,function(h){if(h===null){lgMsg(2,'이 브라우저에서는 확인할 수 없는 계정입니다')}else if(h===u.hash)lgDone(u.id);else bad()});
+  }
+  function lgForgot(){
+    $('lg-note').innerHTML='<div style="text-align:left;line-height:1.5">비밀번호는 복구할 수 없습니다. 저장된 <b>모든 데이터(환자·기록·계정)를 삭제</b>하면 새 계정을 만들 수 있습니다.</div><div class="lg-row" style="margin-top:6px"><input id="lg-rs" placeholder="초기화 라고 입력" aria-label="초기화 확인" style="height:38px;font-size:15px"><button type="button" id="lg-rsgo" class="lg-go" style="margin:0;height:38px;font-size:14px;padding:0 10px" disabled>모두 삭제</button></div>';
+    $('lg-rs').oninput=function(){$('lg-rsgo').disabled=$('lg-rs').value.trim()!=='초기화'};
+    $('lg-rsgo').onclick=function(){S={patients:[]};normS();persist();try{sessionStorage.removeItem('mc-auth')}catch(e){}location.reload()};
+    $('lg-rs').focus();
+  }
+  function lgPw(){
+    xwin('비밀번호 변경','<div class="xf"><label>현재 비밀번호<input id="pc-0" type="password" autocomplete="current-password"></label><label>새 비밀번호 (4자 이상)<input id="pc-1" type="password" autocomplete="new-password"></label><label>새 비밀번호 확인<input id="pc-2" type="password" autocomplete="new-password"></label></div><div class="acts"><button class="btn xc" type="button">닫기</button><button class="btn blue" id="pc-ok" type="button">변경</button></div>',function(){
+      $('pc-ok').onclick=function(){
+        var u=S.users.filter(function(x){return x.id===LG.user})[0],n=$('pc-1').value;if(!u){toast('로그인 정보를 찾을 수 없습니다');return}
+        if(n.length<4){toast('새 비밀번호는 4자 이상이어야 합니다');return}if(n!==$('pc-2').value){toast('새 비밀번호 확인이 다릅니다');return}
+        lgHash($('pc-0').value,u.salt,u.alg,function(h){
+          if(h===null||h!==u.hash){toast('현재 비밀번호가 맞지 않습니다');return}
+          var salt=lgSalt();lgHash(n,salt,'',function(h2,alg){u.salt=salt;u.hash=h2;u.alg=alg;persist();xclose();toast('비밀번호를 변경했습니다')});
+        });
+      };
+    },'wide blue');
+  }
+  /* 진료과 약어 계정: 아이디 = 비밀번호 = 약어 (아이디는 대소문자 구분 없음, 비밀번호는 구분함) */
+  var LG_ACC=['IM','GI','CV','C','Neph','Endo','Hem-Onc','Inf','NR','NE','GS','OS','NS','CS','PS','OB&GY','OBGY','PED','PD','PSY','NP','OPH','ENT','DER','URO','AN','REHAB','DENT'];
+  function lgSeed(){
+    if(S.seedV===2)return;
+    var todo=LG_ACC.filter(function(a){return !S.users.some(function(x){return x.id.toLowerCase()===a.toLowerCase()})}),left=todo.length+1;
+    function fin(){if(--left)return;S.seedV=2;persist()}
+    var adm=S.users.filter(function(x){return x.id==='admin'})[0];
+    if(adm)lgHash('1234',adm.salt,adm.alg,function(h){if(h!==null&&h===adm.hash)S.users=S.users.filter(function(x){return x!==adm});fin()});else fin();
+    todo.forEach(function(a){var salt=lgSalt();lgHash(a,salt,'',function(h,alg){S.users.push({id:a,salt:salt,hash:h,alg:alg});fin()})});
+  }
+  (function(){var u=null;try{u=sessionStorage.getItem('mc-auth')}catch(e){}
+    if(u&&S.users.some(function(x){return x.id===u})){lgSetUser(u);lgBar()}else lgShow();
+    lgSeed()})();
 
   function tick(){var n=new Date();$('clock').textContent=n.getFullYear()+'.'+p2(n.getMonth()+1)+'.'+p2(n.getDate())+' '+['일','월','화','수','목','금','토'][n.getDay()]+' '+p2(n.getHours())+':'+p2(n.getMinutes())}
   tick();setInterval(tick,30000);

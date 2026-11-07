@@ -334,6 +334,25 @@ tfoot td{font-weight:700;background:var(--blue-lt);position:sticky;bottom:0}
 #sk-thumb{width:200px;height:auto;border:1px solid #3a97d8;background:#fff;cursor:pointer}
 @media (max-width:900px){.pg-body{flex-direction:column}.pg-main{flex:none!important;width:100%;max-width:100%}.beds{flex:none;width:100%;border-left:0;border-top:1px solid var(--line);max-height:none}}
 
+/* 로그인 */
+#login{position:fixed;inset:0;z-index:1000;background:#a3a3a3;display:flex;align-items:center;justify-content:center;overflow:auto;padding:20px;color:#fff}
+.lg-box{width:min(440px,100%);display:flex;flex-direction:column;margin:auto}
+.lg-title{text-align:center;font-size:46px;font-weight:800;letter-spacing:.02em}
+.lg-logo{width:120px;height:132px;margin:14px auto 26px;display:block}
+.lg-row{display:flex;align-items:center;gap:8px}
+.lg-ic{width:50px;flex:none}.lg-ic svg{width:100%;height:auto;display:block}
+.lg-colon{font-weight:700;width:8px}
+.lg-row input{flex:1;min-width:0;height:50px;border:0;border-radius:0;background:#fff;color:#14202e;font-size:18px;padding:0 12px}
+.lg-bar{margin:5px 0 16px 66px;min-height:16px;border-radius:8px;background:#7d7d7d;color:#ffe3e3;font-size:12px;padding:0 10px;line-height:16px}
+.lg-go{margin-top:4px;height:46px;border:2px solid #fff;background:transparent;color:#fff;font-size:18px;cursor:pointer}
+.lg-go:hover:not(:disabled){background:rgba(255,255,255,.18)}
+.lg-go:disabled{opacity:.5;cursor:not-allowed}
+.lg-note{margin-top:4px;font-size:13px;text-align:center}
+.lg-links{display:flex;justify-content:center;margin-top:10px}
+.lg-links button{border:0;background:none;color:#fff;text-decoration:underline;cursor:pointer;font-size:13px}
+.lg-foot{margin-top:18px;font-size:11px;text-align:center;opacity:.85}
+body.locked{overflow:hidden}
+.mn-out{margin-left:auto}
 /* 문서작성 */
 .dc{display:grid;grid-template-columns:260px minmax(0,1fr) 270px;height:calc(100vh - 118px);min-height:520px}
 .dc-hd{background:#1fe6ee;color:#05222a;text-align:center;font-size:22px;font-weight:500;padding:8px 6px}

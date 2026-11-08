@@ -18,7 +18,7 @@
   function persist(){try{localStorage.setItem('emr-outpatient-v2',JSON.stringify(S));return true}catch(e){return false}}
   var pTimer=null;function persistSoon(){clearTimeout(pTimer);pTimer=setTimeout(persist,300)}
 
-  var cur=null,curVisit=null,pickDate=TODAY,calY=today.getFullYear(),calM=today.getMonth(),filter='전체',delArm=false;
+  var cur=null,curVisit=null,pickDate=TODAY,calY=today.getFullYear(),calM=today.getMonth(),filter='진료대기',delArm=false;
   function pt(c){return S.patients.filter(function(p){return p.chart===c})[0]}
   function age(b){if(!b)return '';var d=new Date(b),a=today.getFullYear()-d.getFullYear(),m=today.getMonth()-d.getMonth();if(m<0||(m===0&&today.getDate()<d.getDate()))a--;return a}
   function toast(t){var el=$('toast');el.textContent=t;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(function(){el.classList.remove('on')},2000)}
@@ -92,7 +92,7 @@
     var c=cur.chart,ids=S.visits.filter(function(v){return v.chart===c}).map(function(v){return v.id});
     S.patients=S.patients.filter(function(p){return p.chart!==c});S.visits=S.visits.filter(function(v){return v.chart!==c});S.appts=S.appts.filter(function(a){return a.chart!==c});
     S.er=S.er.filter(function(e){return e.chart!==c});S.surg=S.surg.filter(function(s){return s.chart!==c});S.imaging=S.imaging.filter(function(i){return i.chart!==c});['admissions','nursing','vitals','labs','ltc','docs'].forEach(function(k){S[k]=(S[k]||[]).filter(function(x){return x.chart!==c})});
-    ids.forEach(function(i){delete S.notes[i]});
+    ids.forEach(function(i){delete S.notes[i];delete S.vrec[i]});
     cur=null;curVisit=null;erCur=null;opSel=null;disarm();persist();fillForm(null);renderAll();renderHist();loadNote();afterPatient();toast('환자를 삭제했습니다');
   };
   $('btn-search').onclick=function(){hitsFor($('q').value,$('hits'),function(p){pickPatient(p.chart)})};
@@ -128,22 +128,29 @@
   $('btn-rx2').onclick=function(){$('btn-rx').onclick()};
 
   /* ---------- 외래: 접수 현황 ---------- */
-  var STAT=['전체','대기','진료중','완료','수납'];
+  var STAT=['진료대기','예약','수납'];
   function dayVisits(){return S.visits.filter(function(v){return v.date===pickDate})}
+  function stageRows(s){
+    if(s==='예약'){
+      var got={};dayVisits().forEach(function(v){got[v.chart]=1});
+      return S.appts.filter(function(a){return a.date===pickDate&&!got[a.chart]&&pt(a.chart)}).map(function(a,i){return {id:'a'+a.chart+a.time,status:'예약',time:a.time,chart:a.chart,dept:a.dept||'',doc:a.doc||'',type:'',kind:'예약',appt:true}});
+    }
+    return dayVisits().filter(function(v){return s==='진료대기'?(v.status==='대기'||v.status==='진료중'):(v.status==='완료'||v.status==='수납')});
+  }
   function renderChips(){
     var c=$('chips');c.innerHTML='';
     STAT.forEach(function(s){var b=document.createElement('button');b.type='button';b.className='chip';b.setAttribute('aria-pressed',String(filter===s));
-      var n=dayVisits().filter(function(v){return s==='전체'||v.status===s}).length;b.textContent=s+' '+n;b.onclick=function(){filter=s;renderChips();renderQueue()};c.appendChild(b)});
+      var n=stageRows(s).length;b.textContent=s+'('+n+')';b.onclick=function(){filter=s;renderChips();renderQueue()};c.appendChild(b)});
     var dv=dayVisits();$('st-total').textContent='전체 '+dv.length;
     ['대기','진료중','완료'].forEach(function(s,i){$(['st-wait','st-busy','st-done'][i]).textContent=s+' '+dv.filter(function(v){return v.status===s}).length});
   }
   function renderQueue(){
-    var rows=dayVisits().filter(function(v){return filter==='전체'||v.status===filter}).sort(function(a,b){return a.time<b.time?-1:a.time>b.time?1:a.id-b.id});
+    var rows=stageRows(filter).sort(function(a,b){return a.time<b.time?-1:a.time>b.time?1:a.id-b.id});
     var tb=$('queue');tb.innerHTML='';
     rows.forEach(function(v,i){
-      var p=pt(v.chart)||{name:'?',sex:'',birth:''},tr=document.createElement('tr');tr.tabIndex=0;if(curVisit&&curVisit.id===v.id)tr.className='sel';
+      var p=pt(v.chart)||{name:'?',sex:'',birth:''},tr=document.createElement('tr');tr.tabIndex=0;tr.className=(v.status==='진료중'?'busy':'')+(curVisit&&curVisit.id===v.id?' sel':'');
       tr.innerHTML='<td><span class="badge s-'+v.status+'">'+v.status+'</span></td><td class="num">'+(i+1)+'</td><td class="num">'+v.time+'</td><td class="num">'+v.chart+'</td><td>'+esc(p.name)+'</td><td>'+p.sex+'/'+age(p.birth)+'</td><td>'+esc(v.dept)+'</td><td>'+esc(v.doc)+'</td><td>'+v.type+'</td><td>'+esc(v.kind||'일반')+'</td>';
-      var pick=function(){curVisit=v;disarm();setPatient(v.chart);renderQueue();loadNote()};
+      var pick=function(){curVisit=v.appt?null:v;disarm();setPatient(v.chart);renderQueue();loadNote()};
       tr.onclick=pick;tr.onkeydown=function(e){if(e.key==='Enter')pick()};tb.appendChild(tr);
     });
     $('q-empty').hidden=rows.length>0;$('q-date').textContent=pickDate+(pickDate===TODAY?' (오늘)':'');
@@ -154,21 +161,63 @@
     curVisit.status=b.getAttribute('data-st');persist();renderChips();renderQueue();toast(pt(curVisit.chart).name+' → '+curVisit.status)}});
   $('btn-cancel').onclick=function(){
     if(!curVisit){toast('접수현황에서 환자를 선택하세요');return}
-    var id=curVisit.id;S.visits=S.visits.filter(function(v){return v.id!==id});delete S.notes[id];curVisit=null;persist();renderAll();loadNote();toast('접수를 취소했습니다')};
+    var id=curVisit.id;S.visits=S.visits.filter(function(v){return v.id!==id});delete S.notes[id];delete S.vrec[id];curVisit=null;persist();renderAll();loadNote();toast('접수를 취소했습니다')};
 
   document.querySelectorAll('.tab').forEach(function(t){t.onclick=function(){
     document.querySelectorAll('.tab').forEach(function(x){x.setAttribute('aria-selected',String(x===t))});
-    $('tab-note').hidden=t.getAttribute('data-tab')!=='note';$('tab-hist').hidden=t.getAttribute('data-tab')!=='hist'}});
+    var tn=t.getAttribute('data-tab');['note','hist','lab','rx','adm'].forEach(function(k){$('tab-'+k).hidden=k!==tn})}});
   function loadNote(){
     var n=curVisit&&S.notes[curVisit.id]||{};
     ['bp','hr','bt','wt'].forEach(function(k){$('v-'+k).value=n[k]||''});
     ['s','o','a','p'].forEach(function(k){$('n-'+k).value=n[k]||''});
     $('note-who').textContent=curVisit?(pt(curVisit.chart).name+' · '+curVisit.date+' '+curVisit.dept+' · '+curVisit.doc):'접수현황에서 환자를 선택하세요';
+    vrAll();
   }
   $('btn-note').onclick=function(){
     if(!curVisit){toast('접수현황에서 환자를 선택하세요');return}
     var n={};['bp','hr','bt','wt'].forEach(function(k){n[k]=$('v-'+k).value.trim()});['s','o','a','p'].forEach(function(k){n[k]=$('n-'+k).value.trim()});
     S.notes[curVisit.id]=n;persist();renderHist();toast('진료 기록을 저장했습니다')};
+  /* ===== 외래 진료 중 검사 / 처방 / 입원 기록 (접수 건별) ===== */
+  var VR={
+    lab:{title:'검사',cols:[['name','검사명','text'],['result','결과','text'],['date','검사일','date']],none:'저장된 검사 기록이 없습니다.'},
+    rx:{title:'처방',cols:[['name','처방명(약품)','text'],['dose','1회 용량','text'],['days','일수','text'],['memo','용법·메모','text']],none:'저장된 처방이 없습니다.'},
+    adm:{title:'입원',cols:[['ward','병동','text'],['bed','병상','text'],['date','입원일','date'],['memo','사유·메모','text']],none:'저장된 입원 기록이 없습니다.'}
+  };
+  Object.keys(VR).forEach(function(k){
+    var v=VR[k],d=document.createElement('div');d.className='bd';d.id='tab-'+k;d.hidden=true;
+    d.innerHTML='<div style="margin-bottom:4px;color:var(--muted)" id="vr-who-'+k+'"></div><div class="vr-form">'+v.cols.map(function(c){return '<div><label for="vr-'+k+'-'+c[0]+'">'+c[1]+'</label><input id="vr-'+k+'-'+c[0]+'" type="'+c[2]+'" autocomplete="off"></div>'}).join('')+'<div><button class="btn blue" id="vr-'+k+'-add" type="button">추가</button></div></div><table class="vr-t"><thead><tr>'+v.cols.map(function(c){return '<th>'+c[1]+'</th>'}).join('')+'<th style="width:34px"></th></tr></thead><tbody id="vr-'+k+'-body"></tbody></table><div class="empty" id="vr-'+k+'-empty" style="padding:10px"></div>';
+    $('tab-hist').parentNode.appendChild(d);
+    $('vr-'+k+'-add').onclick=function(){vrAdd(k)};
+    v.cols.forEach(function(c){$('vr-'+k+'-'+c[0]).addEventListener('keydown',function(e){if(e.key==='Enter')vrAdd(k)})});
+  });
+  function vrList(k){var r=curVisit&&S.vrec[curVisit.id];return r&&r[k]?r[k]:[]}
+  function vrRender(k){
+    var v=VR[k],tb=$('vr-'+k+'-body');tb.innerHTML='';
+    $('vr-who-'+k).textContent=curVisit?(pt(curVisit.chart).name+' · '+curVisit.date+' '+curVisit.dept+' · '+v.title+' 기록'):'접수현황에서 환자를 선택하세요';
+    var l=vrList(k);$('vr-'+k+'-empty').textContent=curVisit?v.none:'';$('vr-'+k+'-empty').hidden=l.length>0&&!!curVisit;
+    var dt=v.cols.filter(function(c){return c[2]==='date'})[0];
+    if(dt&&!$('vr-'+k+'-'+dt[0]).value)$('vr-'+k+'-'+dt[0]).value=TODAY;
+    l.forEach(function(x){var tr=document.createElement('tr');tr.innerHTML=v.cols.map(function(c){return '<td>'+esc(x[c[0]])+'</td>'}).join('')+'<td></td>';
+      var b=document.createElement('button');b.type='button';b.className='btn sm';b.textContent='×';b.setAttribute('aria-label','삭제');b.onclick=function(){var r=S.vrec[curVisit.id];r[k]=r[k].filter(function(y){return y!==x});if(k==='adm'&&x.admId){var ad=S.admissions.filter(function(q){return q.id===x.admId})[0];if(ad&&ad.status==='입원'&&!(ad.moves&&ad.moves.length)){S.admissions=S.admissions.filter(function(q){return q!==ad});docList();xRefresh()}}persist();vrRender(k)};tr.lastChild.appendChild(b);tb.appendChild(tr)});
+  }
+  function vrAll(){Object.keys(VR).forEach(vrRender)}
+  function vrAdd(k){
+    if(!curVisit){toast('접수현황에서 환자를 선택하세요');return}
+    var v=VR[k],o={id:S.nextId++},first=v.cols[0];
+    v.cols.forEach(function(c){o[c[0]]=$('vr-'+k+'-'+c[0]).value.trim()});
+    if(!o[first[0]]){toast(first[1]+'을(를) 입력하세요');$('vr-'+k+'-'+first[0]).focus();return}
+    if(k==='adm'){
+      if(!o.bed){toast('병상을 입력하세요');$('vr-adm-bed').focus();return}
+      var ex=inpOf(curVisit.chart);if(ex){toast(pt(curVisit.chart).name+' 환자는 이미 입원 중입니다 ('+ex.ward+' '+ex.bed+')');return}
+      if(bedTaken(o.ward,o.bed)){toast(o.ward+' '+o.bed+' 병상은 사용 중입니다');return}
+      var nt=S.notes[curVisit.id]||{};
+      var a={id:S.nextId++,chart:curVisit.chart,ward:o.ward,bed:o.bed,dept:curVisit.dept,doctor:curVisit.doc||'',dx:(nt.a||'').split('\n')[0],date:o.date||TODAY,route:'외래',status:'입원',dDate:'',dType:'',dNote:o.memo||'',moves:[]};
+      S.admissions.push(a);o.admId=a.id;
+    }
+    var r=S.vrec[curVisit.id]||(S.vrec[curVisit.id]={});(r[k]||(r[k]=[])).push(o);persist();
+    v.cols.forEach(function(c){if(c[2]!=='date')$('vr-'+k+'-'+c[0]).value=''});$('vr-'+k+'-'+first[0]).focus();
+    vrRender(k);if(k==='adm'){docList();xRefresh();toast(pt(curVisit.chart).name+' 입원환자에 등록했습니다 ('+o.ward+' '+o.bed+')')}else toast(v.title+' 기록을 추가했습니다');
+  }
   function renderHist(){
     var ul=$('hist');ul.innerHTML='';
     if(!cur){ul.innerHTML='<li style="color:var(--muted)">환자를 선택하면 표시됩니다.</li>';return}
@@ -612,17 +661,80 @@
   }});
   skRedraw();
 
+
+  /* ===== 환자 입원 기록 (수술기록 오른쪽 패널) ===== */
+  var oxSel=null,oxDelArm=false;
+  function oxRec(){return cur?(S.opx[cur.chart]||(S.opx[cur.chart]={ward:'',room:'',prof:'',res:'',dcode:'',dname:'',vs:'',post:[]})):null}
+  var OXF=[['ward','ox-ward'],['room','ox-room'],['prof','ox-prof'],['res','ox-res'],['dcode','ox-dcode'],['dname','ox-dname'],['vs','ox-vs']];
   function renderOpImg(){
     if(mod!=='op')return;
-    var tb=$('opi-body');tb.innerHTML='';
-    if(!cur){$('opi-empty').hidden=false;$('opi-empty').textContent='환자를 선택하면 영상검사가 표시됩니다.';return}
-    var kinds=Array.prototype.slice.call(document.querySelectorAll('.opi-k:checked')).map(function(x){return x.value}),q=val('opi-q').toLowerCase();
-    var list=imgsOf().filter(function(i){return (!kinds.length||kinds.indexOf(i.kind)>-1)&&(!q||i.name.toLowerCase().indexOf(q)>-1)});
-    $('opi-empty').hidden=list.length>0;$('opi-empty').textContent='조건에 맞는 영상검사가 없습니다. 응급기록 > 영상검사에서 추가할 수 있습니다.';
-    list.forEach(function(i){var tr=document.createElement('tr');tr.innerHTML='<td class="num" title="'+esc(i.name)+'">'+esc(i.dt.slice(0,10))+' '+esc(i.kind)+'</td><td style="text-align:center"></td>';
-      var b=document.createElement('button');b.type='button';b.className='btn sm';b.textContent=i.img?'보기':'없음';b.onclick=function(e){e.stopPropagation();viewImg(i)};tr.lastChild.appendChild(b);tr.onclick=function(){viewImg(i)};tb.appendChild(tr)});
+    var r=cur&&(S.opx[cur.chart]||null);
+    $('ox-name').value=cur?cur.name:'';$('ox-chart').value=cur?cur.chart:'';
+    OXF.forEach(function(f){$(f[1]).value=r?(r[f[0]]||''):''});
+    var tb=$('ox-body');tb.innerHTML='';var list=r&&r.post?r.post.slice():[];
+    var asc=(document.querySelector('input[name=ox-ord]:checked')||{}).value==='asc';
+    list.sort(function(a,b){return asc?((a.date||'')<(b.date||'')?-1:1):((a.date||'')<(b.date||'')?1:-1)});
+    list.forEach(function(x){var tr=document.createElement('tr');if(oxSel===x.id)tr.className='sel';
+      tr.innerHTML='<td title="'+esc(x.name)+'">'+esc(x.name)+'</td><td title="'+esc(x.result)+'">'+esc(x.result)+'</td><td>'+esc(x.doc)+'</td><td>'+esc(x.date)+'</td>';
+      tr.onclick=function(){oxSel=x.id;oxDelArm=false;renderOpImg()};tr.ondblclick=function(){oxEdit(x)};tb.appendChild(tr)});
+    for(var k=list.length;k<7;k++){var b=document.createElement('tr');b.className='blank';b.innerHTML='<td></td><td></td><td></td><td></td>';tb.appendChild(b)}
+    document.querySelector('.opx').classList.toggle('opx-view-on',$('ox-view').checked);
   }
-  document.querySelectorAll('.opi-k').forEach(function(c){c.onchange=renderOpImg});$('opi-q').addEventListener('input',renderOpImg);
+  function oxSaveForm(quiet){
+    if(!cur){if(!quiet)toast('먼저 환자를 선택하세요');return false}
+    var r=oxRec();OXF.forEach(function(f){r[f[0]]=$(f[1]).value.trim()});persist();if(!quiet)toast('환자 입원 기록을 저장했습니다');return true;
+  }
+  OXF.forEach(function(f){$(f[1]).addEventListener('change',function(){if(cur)oxSaveForm(true)})});
+  document.querySelectorAll('input[name=ox-ord]').forEach(function(c){c.onchange=renderOpImg});$('ox-view').onchange=renderOpImg;
+  $('ox-find').onclick=function(){pickPt(function(q){pickPatient(q.chart)})};
+  $('ox-bn').onclick=function(){$('ox-name').focus();$('ox-name').select()};
+  $('ox-bc').onclick=function(){$('ox-chart').focus();$('ox-chart').select()};
+  function oxSearch(e){
+    if(e.key!=='Enter')return;var n=$('ox-name').value.trim(),c=$('ox-chart').value.trim();
+    var hits=S.patients.filter(function(p){return (c&&p.chart===c)||(!c&&n&&p.name.indexOf(n)>-1)||(c&&n&&p.chart.indexOf(c)>-1&&p.name.indexOf(n)>-1)});
+    if(hits.length===1)pickPatient(hits[0].chart);else if(!hits.length)toast('일치하는 환자가 없습니다');else pickPt(function(q){pickPatient(q.chart)});
+  }
+  $('ox-name').addEventListener('keydown',oxSearch);$('ox-chart').addEventListener('keydown',oxSearch);
+  $('ox-save').onclick=function(){oxSaveForm(false)};
+  $('ox-adm').onclick=function(){
+    if(!cur){toast('먼저 환자를 선택하세요');return}
+    var a=inpOf(cur.chart);if(!a){toast(cur.name+' 환자의 입원 기록이 없습니다 (입원/퇴원기록에서 입원 등록)');return}
+    $('ox-ward').value=a.ward||'';$('ox-room').value=a.bed||'';$('ox-prof').value=a.doctor||'';$('ox-dname').value=a.dx||'';oxSaveForm(true);toast('입원 정보를 불러왔습니다');
+  };
+  $('ox-del').onclick=function(){
+    if(!cur||!S.opx[cur.chart]){toast('삭제할 입원 기록이 없습니다');return}
+    if(!oxDelArm){oxDelArm=true;$('ox-del').textContent='한 번 더';toast('한 번 더 누르면 이 환자의 입원 기록과 수술 후 검사가 삭제됩니다');return}
+    delete S.opx[cur.chart];oxSel=null;oxDelArm=false;$('ox-del').textContent='삭제';persist();renderOpImg();toast('삭제했습니다');
+  };
+  function oxEdit(x){
+    if(!cur){toast('먼저 환자를 선택하세요');return}
+    xwin('수술 후 검사 '+(x?'수정':'추가')+' · '+cur.name,'<div class="xf"><label>검사명<input id="oxp-n" value="'+esc(x?x.name:'')+'" autocomplete="off"></label><label>결과<input id="oxp-r" value="'+esc(x?x.result:'')+'" autocomplete="off"></label><label>담당의<input id="oxp-d" value="'+esc(x?x.doc:'')+'" autocomplete="off"></label><label>검사일자<input id="oxp-t" type="date" value="'+esc(x?x.date:TODAY)+'"></label></div><div class="acts"><button class="btn" type="button" onclick="document.getElementById(\'dlg-win\').querySelector(\'[data-close]\').click()">닫기</button><button class="btn blue" id="oxp-ok" type="button">저장</button></div>',function(){
+      $('oxp-n').focus();
+      $('oxp-ok').onclick=function(){
+        var n=$('oxp-n').value.trim();if(!n){toast('검사명을 입력하세요');$('oxp-n').focus();return}
+        var r=oxRec();if(!r.post)r.post=[];
+        if(x){x.name=n;x.result=$('oxp-r').value.trim();x.doc=$('oxp-d').value.trim();x.date=$('oxp-t').value||TODAY}
+        else{var y={id:S.nextId++,name:n,result:$('oxp-r').value.trim(),doc:$('oxp-d').value.trim()||(($('op-surgeon')&&$('op-surgeon').value.trim())||''),date:$('oxp-t').value||TODAY};r.post.push(y);oxSel=y.id}
+        OXF.forEach(function(f){r[f[0]]=$(f[1]).value.trim()});
+        persist();xclose();renderOpImg();toast('저장했습니다');
+      };
+    });
+  }
+  $('ox-add').onclick=function(){oxEdit(null)};
+  $('ox-rm').onclick=function(){
+    var r=cur&&S.opx[cur.chart];if(!r||!oxSel){toast('삭제할 검사를 선택하세요');return}
+    r.post=r.post.filter(function(x){return x.id!==oxSel});oxSel=null;persist();renderOpImg();toast('검사를 삭제했습니다');
+  };
+  $('ox-prt').onclick=function(){
+    if(!cur){toast('먼저 환자를 선택하세요');return}
+    var r=S.opx[cur.chart]||{post:[]};
+    var h='<div class="dpage dprint" style="padding:40px"><h2 style="margin:0 0 12px">환자 입원 기록</h2><p>성명/차트번호: '+esc(cur.name)+' / '+esc(cur.chart)+'<br>병동/병실: '+esc(r.ward||'')+' / '+esc(r.room||'')+'<br>담당교수/전공의: '+esc(r.prof||'')+' / '+esc(r.res||'')+'<br>진단코드/진단명: '+esc(r.dcode||'')+' / '+esc(r.dname||'')+'<br>수술 중 V/S: '+esc(r.vs||'')+'</p><h3>수술 후 검사</h3><table style="border-collapse:collapse;width:100%"><tr>'+['검사명','결과','담당의','검사일자'].map(function(t){return '<th style="border:1px solid #333;padding:4px;background:#eee">'+t+'</th>'}).join('')+'</tr>'+(r.post||[]).slice().sort(function(a,b){return a.date<b.date?1:-1}).map(function(x){return '<tr><td style="border:1px solid #333;padding:4px">'+esc(x.name)+'</td><td style="border:1px solid #333;padding:4px">'+esc(x.result)+'</td><td style="border:1px solid #333;padding:4px">'+esc(x.doc)+'</td><td style="border:1px solid #333;padding:4px">'+esc(x.date)+'</td></tr>'}).join('')+'</table></div>';
+    var a=document.createElement('div');a.id='print-area';a.innerHTML=h;document.body.appendChild(a);document.body.classList.add('printing');
+    function done(){document.body.classList.remove('printing');if(a.parentNode)a.parentNode.removeChild(a);window.removeEventListener('afterprint',done)}
+    window.addEventListener('afterprint',done);var t0=Date.now();
+    try{window.print()}catch(e){done();toast('이 화면에서는 인쇄가 막혀 있습니다. 내려받은 MediChart.html에서 사용하세요');return}
+    if(Date.now()-t0<150){done();toast('이 화면에서는 인쇄가 막혀 있을 수 있습니다. 내려받은 MediChart.html에서 사용하세요')}
+  };
 
   /* =================== 수술 그림 팝업 =================== */
   function skThumb(){
@@ -649,7 +761,7 @@
     if(!S.settings.fees)S.settings.fees={};if(!S.settings.rates)S.settings.rates={};if(!S.settings.hospital)S.settings.hospital={name:'',tel:'',addr:''};
     FEE_KEYS.forEach(function(k){if(typeof S.settings.fees[k]!=='number')S.settings.fees[k]=DEF_FEES[k]});
     Object.keys(DEF_RATES).forEach(function(k){if(typeof S.settings.rates[k]!=='number')S.settings.rates[k]=DEF_RATES[k]});
-    if(typeof S.memo!=='string')S.memo='';
+    if(typeof S.memo!=='string')S.memo='';if(!S.vrec||typeof S.vrec!=='object'||Array.isArray(S.vrec))S.vrec={};if(!S.opx||typeof S.opx!=='object'||Array.isArray(S.opx))S.opx={};
     if(!S.nextVisit)S.nextVisit=1;if(!S.nextId)S.nextId=1;
   }
   normS();
@@ -732,7 +844,7 @@
 
   /* ---------- 메뉴바 / 바로가기 탭 ---------- */
   var MENUS=[
-    ['환경설정',[['병원 정보','set-hosp'],['수가·본인부담 설정','set-fee'],['화면 배율','set-zoom'],['비밀번호 변경','pw'],['-'],['데이터 백업 (내보내기)','backup'],['데이터 복원 (가져오기)','restore'],['-'],['전체 데이터 초기화','reset'],['-'],['로그아웃','logout']]],
+    ['환경설정',[['병원 정보','set-hosp'],['수가·본인부담 설정','set-fee'],['화면 배율','set-zoom'],['테마 변경','set-theme'],['비밀번호 변경','pw'],['-'],['데이터 백업 (내보내기)','backup'],['데이터 복원 (가져오기)','restore'],['-'],['전체 데이터 초기화','reset'],['-'],['로그아웃','logout']]],
     ['자료등록/관리',[['환자 등록','pt-new'],['환자 목록 관리','pt-list'],['-'],['의료진 관리','staff'],['병동·병상 관리','ward']]],
     ['진료/간호기록',[['외래기록','go-opd'],['응급기록','go-er'],['수술기록','go-op'],['-'],['간호기록','nursing'],['경과기록','progress'],['-'],['문서작성','go-doc']]],
     ['입원/퇴원기록',[['입원 등록','adm-new'],['퇴원 처리','adm-dis'],['병상 이동 (전실)','adm-move'],['-'],['입퇴원 이력','adm-hist']]],
@@ -762,6 +874,7 @@
     var q=$('qtabs');q.innerHTML='';
     QT.forEach(function(t){var b=document.createElement('button');b.type='button';b.className='qt';b.setAttribute('role','tab');b.setAttribute('data-q',t[1]);b.setAttribute('aria-selected','false');b.textContent=t[0];b.onclick=function(){showMod(t[1])};q.appendChild(b)});
     var rg=document.createElement('button');rg.type='button';rg.className='qt qt-reg';rg.textContent='+ 환자등록';rg.onclick=function(){$('btn-reg').click()};q.appendChild(rg);
+    var ex=document.createElement('button');ex.type='button';ex.className='qt qt-exit';ex.textContent='종료';ex.title='로그아웃하고 로그인 화면으로 돌아갑니다';ex.onclick=function(){lgLogout()};q.appendChild(ex);
   }
   document.addEventListener('click',closeMenus);
   document.addEventListener('keydown',function(e){
@@ -777,7 +890,7 @@
   function cmd(c){
     var go=function(m){return function(){showMod(m)}};
     var map={
-      'set-hosp':xSetHosp,'set-fee':xSetFee,'set-zoom':xSetZoom,'backup':xBackup,'restore':xRestore,'reset':xReset,
+      'set-hosp':xSetHosp,'set-fee':xSetFee,'set-zoom':xSetZoom,'set-theme':xSetTheme,'backup':xBackup,'restore':xRestore,'reset':xReset,
       'pt-new':function(){$('btn-reg').click()},'pt-list':xPtList,'staff':xStaff,'ward':xWard,
       'go-opd':go('opd'),'go-doc':go('doc'),'pw':lgPw,'logout':lgLogout,'go-er':go('er'),'go-op':go('op'),'nursing':function(){xNursing('간호')},'progress':function(){xNursing('경과')},
       'adm-new':function(){admNew()},'adm-dis':function(){admDis()},'adm-move':function(){admMove()},'adm-hist':function(){ST.adm.state='전체';showMod('adm')},
@@ -826,7 +939,7 @@
   }
   function applyState(o){
     S=o;normS();cur=null;curVisit=null;erCur=null;opSel=null;
-    fillForm(null);rxReset();rxMark();loadNote();loadOp(null);renderAll();renderHist();applyBrand();applyZoom();docList();dcNewDoc();afterPatient();persist();
+    fillForm(null);rxReset();rxMark();loadNote();loadOp(null);renderAll();renderHist();applyBrand();applyZoom();applyTheme();docList();dcNewDoc();afterPatient();persist();
   }
   function xRestore(){
     var armed=false;
@@ -852,7 +965,7 @@
     var ids=S.visits.filter(function(v){return v.chart===c}).map(function(v){return v.id});
     S.patients=S.patients.filter(function(p){return p.chart!==c});
     ['visits','appts','er','surg','imaging','admissions','nursing','vitals','labs','ltc','docs'].forEach(function(k){S[k]=S[k].filter(function(x){return x.chart!==c})});
-    ids.forEach(function(i){delete S.notes[i]});
+    ids.forEach(function(i){delete S.notes[i];delete S.vrec[i]});
     if(cur&&cur.chart===c){cur=null;curVisit=null;erCur=null;opSel=null;fillForm(null);rxReset();rxMark();loadNote();loadOp(null)}
     persist();renderAll();renderHist();afterPatient();
   }
@@ -1615,7 +1728,7 @@
   };
   var LG_DEPT={'IM':['내과','내과'],'GI':['내과','소화기내과'],'CV':['내과','순환기내과'],'C':['내과','순환기내과'],'Neph':['내과','신장내과'],'Endo':['내과','내분비내과'],'Hem-Onc':['내과','혈액종양내과'],'Inf':['내과','감염내과'],'NR':['신경과','신경과'],'NE':['신경과','신경과'],'GS':['외과','일반외과'],'OS':['정형외과','정형외과'],'NS':['신경외과','신경외과'],'CS':['흉부외과','심장혈관흉부외과'],'PS':['성형외과','성형외과'],'OB&GY':['산부인과','산부인과'],'OBGY':['산부인과','산부인과'],'PED':['소아청소년과','소아청소년과'],'PD':['소아청소년과','소아청소년과'],'PSY':['정신건강의학과','정신건강의학과'],'NP':['정신건강의학과','정신건강의학과'],'OPH':['안과','안과'],'ENT':['이비인후과','이비인후과'],'DER':['피부과','피부과'],'URO':['비뇨의학과','비뇨의학과'],'AN':['마취통증의학과','마취통증의학과'],'REHAB':['재활의학과','재활의학과'],'DENT':['치과','치과']};
   function lgSetUser(id){
-    LG.user=id;var m=null;Object.keys(LG_DEPT).forEach(function(k){if(k.toLowerCase()===String(id).toLowerCase())m=LG_DEPT[k]});
+    LG.user=id;var m=null,key=String(id).toLowerCase().replace(/^yulje-/,'');Object.keys(LG_DEPT).forEach(function(k){if(k.toLowerCase()===key)m=LG_DEPT[k]});
     LG.dept=m?m[0]:'';LG.label=m?m[1]:'';
     function put(i,v){var e=$(i);if(e&&v&&Array.prototype.some.call(e.options,function(o){return o.value===v}))e.value=v}
     put('r-dept',LG.dept);if(!opSel)put('op-dept',LG.dept);if(!erCur)put('er-dept',LG.dept);
@@ -1665,7 +1778,7 @@
   }
   function lgBar(){
     var b=$('mn-out');if(!b){b=document.createElement('button');b.type='button';b.id='mn-out';b.className='mn-b mn-out';b.onclick=lgLogout;$('menubar').appendChild(b)}
-    b.textContent=(LG.label?LG.label+' ('+LG.user+')':(LG.user||''))+' · 로그아웃';b.title='로그아웃';
+    var key=String(LG.user||'').toLowerCase().replace(/^yulje-/,''),ab=LG.user||'';LG_ACC.forEach(function(a){if(a.toLowerCase()===key)ab=a});b.textContent=ab+' · 로그아웃';b.title='로그아웃';
   }
   function lgLogout(){try{sessionStorage.removeItem('mc-auth')}catch(e){}LG.user=null;lgShow()}
   function lgSubmit(){
@@ -1704,19 +1817,33 @@
       };
     },'wide blue');
   }
-  /* 진료과 약어 계정: 아이디 = 비밀번호 = 약어 (아이디는 대소문자 구분 없음, 비밀번호는 구분함) */
+  /* 진료과 약어 계정: 아이디 = yulje-약어 (대소문자 구분 없음), 비밀번호 = 1234 */
   var LG_ACC=['IM','GI','CV','C','Neph','Endo','Hem-Onc','Inf','NR','NE','GS','OS','NS','CS','PS','OB&GY','OBGY','PED','PD','PSY','NP','OPH','ENT','DER','URO','AN','REHAB','DENT'];
   function lgSeed(){
-    if(S.seedV===2)return;
-    var todo=LG_ACC.filter(function(a){return !S.users.some(function(x){return x.id.toLowerCase()===a.toLowerCase()})}),left=todo.length+1;
-    function fin(){if(--left)return;S.seedV=2;persist()}
-    var adm=S.users.filter(function(x){return x.id==='admin'})[0];
-    if(adm)lgHash('1234',adm.salt,adm.alg,function(h){if(h!==null&&h===adm.hash)S.users=S.users.filter(function(x){return x!==adm});fin()});else fin();
-    todo.forEach(function(a){var salt=lgSalt();lgHash(a,salt,'',function(h,alg){S.users.push({id:a,salt:salt,hash:h,alg:alg});fin()})});
+    if(S.seedV===3)return;
+    var todo=LG_ACC.map(function(a){return 'yulje-'+a}).filter(function(a){return !S.users.some(function(x){return x.id.toLowerCase()===a.toLowerCase()})});
+    /* 예전 기본 계정(비밀번호를 바꾸지 않은 것만)은 정리 */
+    var olds=[];S.users.forEach(function(u){var l=u.id.toLowerCase();if(l==='admin')olds.push([u,'1234']);LG_ACC.forEach(function(a){if(a.toLowerCase()===l)olds.push([u,a])})});
+    var left=todo.length+olds.length+1;
+    function fin(){if(--left)return;S.seedV=3;persist()}
+    olds.forEach(function(o){lgHash(o[1],o[0].salt,o[0].alg,function(h){if(h!==null&&h===o[0].hash)S.users=S.users.filter(function(x){return x!==o[0]});fin()})});
+    todo.forEach(function(a){var salt=lgSalt();lgHash('1234',salt,'',function(h,alg){S.users.push({id:a,salt:salt,hash:h,alg:alg});fin()})});
+    fin();
   }
   (function(){var u=null;try{u=sessionStorage.getItem('mc-auth')}catch(e){}
     if(u&&S.users.some(function(x){return x.id===u})){lgSetUser(u);lgBar()}else lgShow();
     lgSeed()})();
+
+  /* 테마 */
+  var THEMES=[['','기본 (파랑)','#1c5fae'],['navy','남색','#1f3a6e'],['gray','회색','#4a4f57'],['mint','민트','#17806f']];
+  function applyTheme(){var t=S.settings&&S.settings.theme||'';if(t)document.documentElement.setAttribute('data-theme',t);else document.documentElement.removeAttribute('data-theme')}
+  function xSetTheme(){
+    var cur_t=S.settings.theme||'';
+    xwin('테마 변경','<div class="th-opts">'+THEMES.map(function(t){return '<label class="th-o"><input type="radio" name="thm" value="'+t[0]+'"'+(t[0]===cur_t?' checked':'')+'><span class="th-sw" style="background:'+t[2]+'"></span>'+t[1]+'</label>'}).join('')+'</div><div class="acts"><button class="btn xc" type="button">닫기</button></div>',function(b){
+      Array.prototype.forEach.call(b.querySelectorAll('[name=thm]'),function(r){r.onchange=function(){S.settings.theme=r.value;applyTheme();persist();toast('테마를 바꿨습니다')}});
+    },'wide blue');
+  }
+  applyTheme();
 
   function tick(){var n=new Date();$('clock').textContent=n.getFullYear()+'.'+p2(n.getMonth()+1)+'.'+p2(n.getDate())+' '+['일','월','화','수','목','금','토'][n.getDay()]+' '+p2(n.getHours())+':'+p2(n.getMinutes())}
   tick();setInterval(tick,30000);

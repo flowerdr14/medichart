@@ -71,6 +71,9 @@
           <div class="tabs" role="tablist">
             <button class="tab" role="tab" aria-selected="true" data-tab="note" type="button">진료기록</button>
             <button class="tab" role="tab" aria-selected="false" data-tab="hist" type="button">이전내역</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="lab" type="button">검사</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="rx" type="button">처방</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="adm" type="button">입원</button>
           </div>
           <div class="bd" id="tab-note">
             <div style="margin-bottom:4px;color:var(--muted)" id="note-who">접수 현황에서 환자를 선택하세요</div>
@@ -279,12 +282,20 @@
         </div>
       </section>
 
-      <aside aria-label="영상검사">
-        <div class="oh">영상검사</div>
-        <div class="vw-hd"><label class="ck"><input type="checkbox" class="opi-k" value="CT">CT</label><label class="ck"><input type="checkbox" class="opi-k" value="MRI">MRI</label><label class="ck"><input type="checkbox" class="opi-k" value="X-Ray">X-Ray</label>
-          <div style="flex:1 1 100%;display:flex;gap:4px;border:2px solid #000;align-items:center;padding:0 6px"><input id="opi-q" style="border:0" placeholder="검사명 검색" aria-label="영상검사 검색"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2a8fbd" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="M15 15l6 6"/></svg></div></div>
-        <table class="sk-img-t" style="min-width:0"><thead><tr><th>검사일</th><th style="width:70px">사진보기</th></tr></thead><tbody id="opi-body"></tbody></table>
-        <div class="empty" id="opi-empty">환자를 선택하면 영상검사가 표시됩니다.</div>
+      <aside aria-label="환자 입원 기록" class="opx">
+        <div class="opx-g2"><button type="button" class="opx-b" id="ox-find">환자조회</button><button type="button" class="opx-b" id="ox-del">삭제</button></div>
+        <div class="opx-g4"><button type="button" class="opx-b" id="ox-bn">성명</button><button type="button" class="opx-b" id="ox-bc">차트번호</button><button type="button" class="opx-b" id="ox-save">수정</button><button type="button" class="opx-b" id="ox-adm">선택등록</button></div>
+        <div class="oh">환자 입원 기록</div>
+        <div class="opx-box">
+          <div class="opx-r"><label for="ox-name">성명 / 차트번호</label><input id="ox-name" autocomplete="off"><b>/</b><input id="ox-chart" autocomplete="off" class="w2"></div>
+          <div class="opx-r"><label for="ox-ward">병동 / 병실번호</label><input id="ox-ward" autocomplete="off"><b>/</b><input id="ox-room" autocomplete="off" class="w2"></div>
+          <div class="opx-r"><label for="ox-prof">담당교수 / 전공의</label><input id="ox-prof" autocomplete="off"><b>/</b><input id="ox-res" autocomplete="off" class="w2"></div>
+          <div class="opx-r"><label for="ox-dcode">진단코드 / 진단명</label><input id="ox-dcode" autocomplete="off" class="w1"><input id="ox-dname" autocomplete="off" class="w2"></div>
+          <div class="opx-r"><label for="ox-vs">수술 중 V/S</label><input id="ox-vs" autocomplete="off" class="w2"></div>
+        </div>
+        <div class="opx-act"><button type="button" class="opx-b" id="ox-add">추가</button><button type="button" class="opx-b" id="ox-rm">삭제</button><button type="button" class="opx-b" id="ox-prt">출력</button><label class="opx-view"><input type="checkbox" id="ox-view"><span>View</span></label></div>
+        <div class="oh ohx"><span>수술 후 검사</span><span class="opx-sort"><span class="lat">최신순<i aria-hidden="true">➜</i></span><label><input type="radio" name="ox-ord" value="asc">Asc</label><label><input type="radio" name="ox-ord" value="desc" checked>Des</label></span></div>
+        <div class="opx-tw"><table class="opx-t"><thead><tr><th>검사명</th><th>결과</th><th>담당의</th><th>검사일자</th></tr></thead><tbody id="ox-body"></tbody></table></div>
       </aside>
     </div>
   </div>

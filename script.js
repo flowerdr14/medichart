@@ -135,7 +135,9 @@
       var got={};dayVisits().forEach(function(v){got[v.chart]=1});
       return S.appts.filter(function(a){return a.date===pickDate&&!got[a.chart]&&pt(a.chart)}).map(function(a,i){return {id:'a'+a.chart+a.time,status:'예약',time:a.time,chart:a.chart,dept:a.dept||'',doc:a.doc||'',type:'',kind:'예약',appt:true}});
     }
-    return dayVisits().filter(function(v){return s==='진료대기'?(v.status==='대기'||v.status==='진료중'):(v.status==='완료'||v.status==='수납')});
+    var vs=dayVisits().filter(function(v){return s==='진료대기'?(v.status==='대기'||v.status==='진료중'):(v.status==='완료'||v.status==='수납')});
+    if(s==='수납')S.surg.forEach(function(g){if(g.date===pickDate&&!g.temp&&pt(g.chart))vs.push({id:1e9+g.id,status:'수술',time:'',chart:g.chart,dept:g.dept||'',doc:g.surgeon||'',type:'수술',kind:g.name||'수술기록',surg:g})});
+    return vs;
   }
   function renderChips(){
     var c=$('chips');c.innerHTML='';
@@ -145,12 +147,12 @@
     ['대기','진료중','완료'].forEach(function(s,i){$(['st-wait','st-busy','st-done'][i]).textContent=s+' '+dv.filter(function(v){return v.status===s}).length});
   }
   function renderQueue(){
-    var rows=stageRows(filter).sort(function(a,b){return a.time<b.time?-1:a.time>b.time?1:a.id-b.id});
+    var rows=stageRows(filter).sort(function(a,b){return (a.surg?1:0)-(b.surg?1:0)||(a.time<b.time?-1:a.time>b.time?1:a.id-b.id)});
     var tb=$('queue');tb.innerHTML='';
     rows.forEach(function(v,i){
       var p=pt(v.chart)||{name:'?',sex:'',birth:''},tr=document.createElement('tr');tr.tabIndex=0;tr.className=(v.status==='진료중'?'busy':'')+(curVisit&&curVisit.id===v.id?' sel':'');
       tr.innerHTML='<td><span class="badge s-'+v.status+'">'+v.status+'</span></td><td class="num">'+(i+1)+'</td><td class="num">'+v.time+'</td><td class="num">'+v.chart+'</td><td>'+esc(p.name)+'</td><td>'+p.sex+'/'+age(p.birth)+'</td><td>'+esc(v.dept)+'</td><td>'+esc(v.doc)+'</td><td>'+v.type+'</td><td>'+esc(v.kind||'일반')+'</td>';
-      var pick=function(){curVisit=v.appt?null:v;disarm();setPatient(v.chart);renderQueue();loadNote()};
+      var pick=function(){curVisit=(v.appt||v.surg)?null:v;disarm();setPatient(v.chart);renderQueue();loadNote();if(v.surg){showMod('op');loadOp(v.surg)}};
       tr.onclick=pick;tr.onkeydown=function(e){if(e.key==='Enter')pick()};tb.appendChild(tr);
     });
     $('q-empty').hidden=rows.length>0;$('q-date').textContent=pickDate+(pickDate===TODAY?' (오늘)':'');
@@ -1771,10 +1773,28 @@
     ['lg-id','lg-pw'].forEach(function(i){$(i).addEventListener('input',lgClear);$(i).addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();lgSubmit()}})});
     $('lg-id').focus();
   }
+  /* 병원 정보 미등록 시 입력 전에는 쓸 수 없는 모달 */
+  function hospOk(){var h=S.settings.hospital;return !!(h&&h.name&&h.tel&&h.addr)}
+  function hospGate(){
+    if(hospOk()||$('hosp-gate'))return;
+    var h=S.settings.hospital||{name:'',tel:'',addr:''};
+    var g=document.createElement('div');g.id='hosp-gate';g.setAttribute('role','alertdialog');g.setAttribute('aria-modal','true');g.setAttribute('aria-labelledby','hg-t');
+    g.innerHTML='<form class="hg-box" id="hg-form" novalidate><div class="hg-h" id="hg-t">병원 정보를 등록해주세요</div><div class="hg-b"><p>처음 사용하는 병원입니다. 병원 정보를 모두 입력해야 프로그램을 사용할 수 있습니다.</p><label>병원명<input id="hg-n" autocomplete="organization" value="'+esc(h.name)+'"></label><label>전화번호<input id="hg-t2" inputmode="tel" autocomplete="tel" placeholder="예) 02-123-4567" value="'+esc(h.tel)+'"></label><label>주소<input id="hg-a" autocomplete="street-address" value="'+esc(h.addr)+'"></label><div class="hg-msg" id="hg-msg" role="alert"></div><button class="btn blue" id="hg-ok" type="submit">등록</button></div></form>';
+    document.body.appendChild(g);
+    var w=document.querySelector('.window');if(w)w.inert=true;
+    $('hg-form').onsubmit=function(e){e.preventDefault();
+      var n=$('hg-n').value.trim(),t=$('hg-t2').value.trim(),a=$('hg-a').value.trim(),m=$('hg-msg');
+      var bad=!n?['hg-n','병원명을 입력하세요']:!t?['hg-t2','전화번호를 입력하세요']:!/^[0-9+\-() ]{7,20}$/.test(t)?['hg-t2','전화번호 형식을 확인하세요']:!a?['hg-a','주소를 입력하세요']:null;
+      if(bad){m.textContent=bad[1];$(bad[0]).focus();return}
+      S.settings.hospital={name:n,tel:t,addr:a};persist();applyBrand();
+      g.parentNode.removeChild(g);if(w)w.inert=false;toast('병원 정보를 등록했습니다');
+    };
+    setTimeout(function(){$('hg-n').focus()},0);
+  }
   function lgDone(id){
     lgSetUser(id);LG.fail=0;try{sessionStorage.setItem('mc-auth',id)}catch(e){}
     var el=$('login');if(el)el.parentNode.removeChild(el);document.body.classList.remove('locked');
-    var w=document.querySelector('.window');if(w)w.inert=false;lgBar();
+    var w=document.querySelector('.window');if(w)w.inert=false;lgBar();hospGate();
   }
   function lgBar(){
     var b=$('mn-out');if(!b){b=document.createElement('button');b.type='button';b.id='mn-out';b.className='mn-b mn-out';b.onclick=lgLogout;$('menubar').appendChild(b)}
@@ -1831,7 +1851,7 @@
     fin();
   }
   (function(){var u=null;try{u=sessionStorage.getItem('mc-auth')}catch(e){}
-    if(u&&S.users.some(function(x){return x.id===u})){lgSetUser(u);lgBar()}else lgShow();
+    if(u&&S.users.some(function(x){return x.id===u})){lgSetUser(u);lgBar();hospGate()}else lgShow();
     lgSeed()})();
 
   /* 테마 */

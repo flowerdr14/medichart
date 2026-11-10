@@ -92,6 +92,7 @@ td.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .badge{display:inline-block;min-width:42px;text-align:center;padding:0 6px;font-weight:700;font-size:11px}
 #queue tr.busy td{color:var(--st-busy);font-weight:700;background:#fdeceb}
 #queue tr.busy.sel td{background:#f8cfcb}
+.s-수술{background:#8e5bb5;color:#fff}
 .s-예약{background:#5b9bd5;color:#fff}
 .s-대기{background:var(--st-wait);color:var(--st-wait-fg)}.s-진료중{background:var(--st-busy);color:var(--st-busy-fg)}
 .s-완료{background:var(--st-done);color:var(--st-done-fg)}.s-수납{background:var(--st-paid);color:var(--st-paid-fg)}
@@ -246,6 +247,12 @@ td.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .sk-img-t td{border:1px solid var(--grid)}
 
 /* 팝업 */
+#hosp-gate{position:fixed;inset:0;background:rgba(10,20,35,.6);display:flex;align-items:center;justify-content:center;padding:12px;z-index:60;overflow:auto}
+.hg-box{width:min(440px,100%);background:#fff;border:1px solid var(--line);box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.hg-h{background:linear-gradient(var(--hd1),var(--blue));color:#fff;font-weight:700;font-size:17px;padding:10px 14px}
+.hg-b{padding:14px;display:flex;flex-direction:column;gap:10px}.hg-b p{margin:0;color:var(--muted);font-size:13px}
+.hg-b label{display:flex;flex-direction:column;gap:3px;font-size:13px}.hg-b input{width:100%}
+.hg-msg{min-height:18px;color:#c0392b;font-size:13px}
 .ov{position:fixed;inset:0;background:rgba(10,20,35,.45);display:flex;align-items:flex-start;justify-content:center;gap:12px;padding:40px 12px;overflow:auto;z-index:30;flex-wrap:wrap}
 .dlg{background:#fff;border:2px solid var(--teal);width:min(560px,100%);max-width:100%}
 .dlg.wide{width:min(620px,100%)}

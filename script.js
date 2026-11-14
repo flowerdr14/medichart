@@ -24,11 +24,12 @@
   function toast(t){var el=$('toast');el.textContent=t;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(function(){el.classList.remove('on')},2000)}
 
   /* ---------- 공통: 팝업 ---------- */
+  var DVPOP=/^#dv/.test(location.hash);if(DVPOP){document.documentElement.classList.add('dvpop');document.title='문서뷰어'}
   function showDlg(id){var d=$(id);d.hidden=false;d.parentNode.hidden=false}
   function hideDlg(id){var d=$(id);d.hidden=true;var p=d.parentNode,any=false;Array.prototype.forEach.call(p.children,function(c){if(!c.hidden)any=true});if(!any)p.hidden=true}
   document.querySelectorAll('[data-close]').forEach(function(b){b.onclick=function(){hideDlg(b.getAttribute('data-close'))}});
-  document.querySelectorAll('.ov').forEach(function(ov){ov.addEventListener('mousedown',function(e){if(e.target===ov){Array.prototype.forEach.call(ov.children,function(c){c.hidden=true});ov.hidden=true}})});
-  document.addEventListener('keydown',function(e){if(e.key==='Escape')document.querySelectorAll('.ov').forEach(function(ov){if(!ov.hidden){Array.prototype.forEach.call(ov.children,function(c){c.hidden=true});ov.hidden=true}})});
+  document.querySelectorAll('.ov').forEach(function(ov){ov.addEventListener('mousedown',function(e){if(DVPOP)return;if(e.target===ov){Array.prototype.forEach.call(ov.children,function(c){c.hidden=true});ov.hidden=true}})});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!DVPOP)document.querySelectorAll('.ov').forEach(function(ov){if(!ov.hidden){Array.prototype.forEach.call(ov.children,function(c){c.hidden=true});ov.hidden=true}})});
 
   /* ---------- 공통: 환자 선택/검색 ---------- */
   function hitsFor(q,box,cb){
@@ -167,7 +168,7 @@
 
   document.querySelectorAll('.tab').forEach(function(t){t.onclick=function(){
     document.querySelectorAll('.tab').forEach(function(x){x.setAttribute('aria-selected',String(x===t))});
-    var tn=t.getAttribute('data-tab');['note','hist','lab','rx','adm'].forEach(function(k){$('tab-'+k).hidden=k!==tn})}});
+    var tn=t.getAttribute('data-tab');['note','hist','lab','rx','adm','img'].forEach(function(k){$('tab-'+k).hidden=k!==tn})}});
   function loadNote(){
     var n=curVisit&&S.notes[curVisit.id]||{};
     ['bp','hr','bt','wt'].forEach(function(k){$('v-'+k).value=n[k]||''});
@@ -202,7 +203,23 @@
     l.forEach(function(x){var tr=document.createElement('tr');tr.innerHTML=v.cols.map(function(c){return '<td>'+esc(x[c[0]])+'</td>'}).join('')+'<td></td>';
       var b=document.createElement('button');b.type='button';b.className='btn sm';b.textContent='×';b.setAttribute('aria-label','삭제');b.onclick=function(){var r=S.vrec[curVisit.id];r[k]=r[k].filter(function(y){return y!==x});if(k==='adm'&&x.admId){var ad=S.admissions.filter(function(q){return q.id===x.admId})[0];if(ad&&ad.status==='입원'&&!(ad.moves&&ad.moves.length)){S.admissions=S.admissions.filter(function(q){return q!==ad});docList();xRefresh()}}persist();vrRender(k)};tr.lastChild.appendChild(b);tb.appendChild(tr)});
   }
-  function vrAll(){Object.keys(VR).forEach(vrRender)}
+  var dimg=document.createElement('div');dimg.className='bd';dimg.id='tab-img';dimg.hidden=true;
+  dimg.innerHTML='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="muted" id="xi-who" style="flex:1"></span><button class="btn blue" id="xi-add" type="button">영상검사 추가</button></div><div class="xi-grid" id="xi-grid"></div><div class="empty" id="xi-empty" style="padding:10px"></div>';
+  $('tab-hist').parentNode.appendChild(dimg);
+  $('xi-add').onclick=function(){$('img-add').click()};
+  function xiRender(){
+    var g=$('xi-grid');g.innerHTML='';var list=imgsOf();
+    $('xi-who').textContent=cur?(cur.name+' · 영상검사 '+list.length+'건'):'환자를 선택하세요';
+    $('xi-empty').textContent=cur?(list.length?'':'등록된 영상검사가 없습니다. 오른쪽 위 버튼으로 이미지를 등록하세요.'):'';$('xi-empty').hidden=!!list.length&&!!cur;
+    list.forEach(function(i){
+      var c=document.createElement('button');c.type='button';c.className='xi-card';c.title='눌러서 크게 보기';
+      c.innerHTML=(i.img?'<img alt="'+esc(i.name)+'" src="'+i.img+'">':'<span class="xi-none">이미지 없음</span>')+'<b>'+esc((i.kind?i.kind+' · ':'')+i.name)+'</b><small>'+esc(i.dt.replace('T',' '))+'</small>';
+      c.onclick=function(){viewImg(i)};
+      var x=document.createElement('span');x.className='xi-x';x.textContent='×';x.setAttribute('role','button');x.setAttribute('aria-label','영상검사 삭제');x.tabIndex=0;
+      var del=function(e){e.stopPropagation();e.preventDefault();S.imaging=S.imaging.filter(function(y){return y!==i});persist();xiRender();renderErImg();toast('영상검사를 삭제했습니다')};
+      x.onclick=del;x.onkeydown=function(e){if(e.key==='Enter'||e.key===' ')del(e)};c.appendChild(x);g.appendChild(c)});
+  }
+  function vrAll(){Object.keys(VR).forEach(vrRender);xiRender()}
   function vrAdd(k){
     if(!curVisit){toast('접수현황에서 환자를 선택하세요');return}
     var v=VR[k],o={id:S.nextId++},first=v.cols[0];
@@ -351,6 +368,7 @@
     $('v-body').innerHTML=i.img?'<img class="pv" alt="'+esc(i.name)+'" src="'+i.img+'">':'<div class="empty">첨부된 이미지가 없습니다.</div>';showDlg('dlg-view');
   }
   function renderErImg(){
+    if(typeof xiRender==='function')xiRender();
     var tb=$('er-img-body');tb.innerHTML='';var list=imgsOf();
     if(!list.length){tb.innerHTML='<tr><td colspan="3" style="color:var(--muted);text-align:center;cursor:default">'+(cur?'등록된 영상검사가 없습니다. 오른쪽 위 추가 버튼으로 등록하세요.':'환자를 선택하세요.')+'</td></tr>';return}
     list.forEach(function(i){var tr=document.createElement('tr');
@@ -763,7 +781,7 @@
     if(!S.settings.fees)S.settings.fees={};if(!S.settings.rates)S.settings.rates={};if(!S.settings.hospital)S.settings.hospital={name:'',tel:'',addr:''};
     FEE_KEYS.forEach(function(k){if(typeof S.settings.fees[k]!=='number')S.settings.fees[k]=DEF_FEES[k]});
     Object.keys(DEF_RATES).forEach(function(k){if(typeof S.settings.rates[k]!=='number')S.settings.rates[k]=DEF_RATES[k]});
-    if(typeof S.memo!=='string')S.memo='';if(!S.vrec||typeof S.vrec!=='object'||Array.isArray(S.vrec))S.vrec={};if(!S.opx||typeof S.opx!=='object'||Array.isArray(S.opx))S.opx={};
+    if(typeof S.memo!=='string')S.memo='';if(!S.dvann||typeof S.dvann!=='object'||Array.isArray(S.dvann))S.dvann={};if(!S.vrec||typeof S.vrec!=='object'||Array.isArray(S.vrec))S.vrec={};if(!S.opx||typeof S.opx!=='object'||Array.isArray(S.opx))S.opx={};
     if(!S.nextVisit)S.nextVisit=1;if(!S.nextId)S.nextId=1;
   }
   normS();
@@ -851,11 +869,11 @@
     ['진료/간호기록',[['외래기록','go-opd'],['응급기록','go-er'],['수술기록','go-op'],['-'],['간호기록','nursing'],['경과기록','progress'],['-'],['문서작성','go-doc']]],
     ['입원/퇴원기록',[['입원 등록','adm-new'],['퇴원 처리','adm-dis'],['병상 이동 (전실)','adm-move'],['-'],['입퇴원 이력','adm-hist']]],
     ['장기요양평가',[['일상생활동작 (Barthel)','ltc-B'],['욕창 위험도 (Braden)','ltc-R'],['낙상 위험도 (Morse)','ltc-M'],['-'],['평가 이력','ltc-H']]],
-    ['자료조회',[['환자 종합조회','q-pt'],['외래 접수 조회','q-visit'],['진료 통계','q-stat'],['-'],['입퇴원 조회','go-adm'],['검사결과 조회','go-lab'],['청구자료 조회','go-bill']]],
+    ['자료조회',[['환자 종합조회','q-pt'],['외래 접수 조회','q-visit'],['진료 통계','q-stat'],['-'],['입퇴원 조회','go-adm'],['검사결과 조회','go-lab'],['청구자료 조회','go-bill'],['문서뷰어','go-dv']]],
     ['유틸리티',[['BMI·BSA 계산기','u-bmi'],['체중별 약물 용량 계산','u-dose'],['날짜·재원일수 계산','u-days'],['-'],['메모장','u-memo']]],
     ['도움말',[['사용 안내 (F1)','h-guide'],['단축키','h-key'],['프로그램 정보','h-about']]]
   ];
-  var QT=[['청구자료','bill'],['입퇴원관리','adm'],['입원환자','inp'],['검사결과','lab'],['V I T A L','vit'],['T.P.R.','tpr'],['문서작성','doc'],['응급기록','er'],['외래기록','opd'],['수술기록','op']];
+  var QT=[['청구자료','bill'],['입퇴원관리','adm'],['입원환자','inp'],['검사결과','lab'],['V I T A L','vit'],['T.P.R.','tpr'],['문서작성','doc'],['문서뷰어','dv'],['응급기록','er'],['외래기록','opd'],['수술기록','op']];
   function closeMenus(){document.querySelectorAll('.mn-dd').forEach(function(d){d.hidden=true});document.querySelectorAll('.mn-b').forEach(function(b){b.setAttribute('aria-expanded','false')});menuOpen=false}
   function openMenu(b,dd){closeMenus();dd.hidden=false;b.setAttribute('aria-expanded','true');menuOpen=true}
   function buildMenus(){
@@ -874,7 +892,7 @@
       wrap.appendChild(b);wrap.appendChild(dd);bar.appendChild(wrap);
     });
     var q=$('qtabs');q.innerHTML='';
-    QT.forEach(function(t){var b=document.createElement('button');b.type='button';b.className='qt';b.setAttribute('role','tab');b.setAttribute('data-q',t[1]);b.setAttribute('aria-selected','false');b.textContent=t[0];b.onclick=function(){showMod(t[1])};q.appendChild(b)});
+    QT.forEach(function(t){var b=document.createElement('button');b.type='button';b.className='qt';b.setAttribute('role','tab');b.setAttribute('data-q',t[1]);b.setAttribute('aria-selected','false');b.textContent=t[0];b.onclick=function(){if(t[1]==='dv')openDV();else showMod(t[1])};q.appendChild(b)});
     var rg=document.createElement('button');rg.type='button';rg.className='qt qt-reg';rg.textContent='+ 환자등록';rg.onclick=function(){$('btn-reg').click()};q.appendChild(rg);
     var ex=document.createElement('button');ex.type='button';ex.className='qt qt-exit';ex.textContent='종료';ex.title='로그아웃하고 로그인 화면으로 돌아갑니다';ex.onclick=function(){lgLogout()};q.appendChild(ex);
   }
@@ -897,7 +915,7 @@
       'go-opd':go('opd'),'go-doc':go('doc'),'pw':lgPw,'logout':lgLogout,'go-er':go('er'),'go-op':go('op'),'nursing':function(){xNursing('간호')},'progress':function(){xNursing('경과')},
       'adm-new':function(){admNew()},'adm-dis':function(){admDis()},'adm-move':function(){admMove()},'adm-hist':function(){ST.adm.state='전체';showMod('adm')},
       'ltc-B':function(){xLtc('B')},'ltc-R':function(){xLtc('R')},'ltc-M':function(){xLtc('M')},'ltc-H':function(){xLtc('H')},
-      'q-pt':xQPatient,'q-visit':xQVisit,'q-stat':xQStat,'go-adm':go('adm'),'go-lab':go('lab'),'go-bill':go('bill'),
+      'q-pt':xQPatient,'q-visit':xQVisit,'q-stat':xQStat,'go-adm':go('adm'),'go-lab':go('lab'),'go-bill':go('bill'),'go-dv':openDV,
       'u-bmi':xBmi,'u-dose':xDose,'u-days':xDays,'u-memo':xMemo,'h-guide':hGuide,'h-key':hKey,'h-about':hAbout
     };
     if(map[c])map[c]();
@@ -1599,6 +1617,192 @@
     if(Date.now()-t0<150){done();toast('이 화면에서는 인쇄가 막혀 있을 수 있습니다. 내려받은 MediChart.html에서 사용하세요')}
   }
 
+  
+  /* ===== 문서뷰어 (팝업): 문서와 영상검사 이미지를 보고 표시를 그린다 ===== */
+  var DV={key:'',kind:'',rec:null,pi:0,tool:'pen',color:'#000000',w:3,zoom:100,W:794,H:1123,nat:794,img:null,drag:null,arm:null,armT:0};
+  function dvAnn(k,create){var a=S.dvann[k];if(!a&&create)a=S.dvann[k]={v:0,p:{}};return a}
+  function dvStrokes(create){var a=dvAnn(DV.key,create);if(!a)return [];return a.p[DV.pi]||(create?(a.p[DV.pi]=[]):[])}
+  function dvPtFilter(){
+    var q=$('dv-q').value.trim().toLowerCase(),dept=$('dv-dept').value,set=null;
+    if(dept){set={};S.visits.concat(S.er,S.surg,S.admissions).forEach(function(x){if(x.dept===dept)set[x.chart]=1})}
+    return function(chart){
+      var p=pt(chart);
+      if(q&&(!p||(p.name.toLowerCase().indexOf(q)<0&&String(p.chart).toLowerCase().indexOf(q)<0)))return false;
+      if(set&&!set[chart])return false;return true;
+    };
+  }
+  function dvItems(){
+    var ok=dvPtFilter(),kind=$('dv-kind').value,day=$('dv-date').value,ord=(document.querySelector('input[name=dv-ord]:checked')||{}).value||'new';
+    var imk={};Array.prototype.forEach.call(document.querySelectorAll('.dv-im'),function(c){imk[c.value]=c.checked});
+    var docs=kind==='img'?[]:S.docs.filter(function(d){return (!d.chart?!$('dv-q').value.trim()&&!$('dv-dept').value:ok(d.chart))&&(!day||d.dt.slice(0,10)===day)});
+    var imgs=kind==='doc'?[]:S.imaging.filter(function(i){return ok(i.chart)&&(!day||i.dt.slice(0,10)===day)&&(imk[i.kind]!==false)});
+    function key(x,pre){return pre+x.id}
+    function sort(a,pre){return a.sort(function(x,y){
+      if(ord==='old')return x.dt<y.dt?-1:x.dt>y.dt?1:0;
+      if(ord==='view'){var vx=(S.dvann[key(x,pre)]||{}).v||0,vy=(S.dvann[key(y,pre)]||{}).v||0;if(vx!==vy)return vy-vx}
+      return x.dt<y.dt?1:x.dt>y.dt?-1:0})}
+    return {docs:sort(docs,'d'),imgs:sort(imgs,'i')};
+  }
+  function dvLists(){
+    var it=dvItems();
+    function fill(el,rows,pre,mk){
+      el.innerHTML='';
+      rows.forEach(function(r){var p=r.chart?pt(r.chart):null;var b=document.createElement('button');b.type='button';b.className='dv-li';
+        if(DV.key===pre+r.id)b.setAttribute('aria-current','true');
+        b.innerHTML=mk(r,p);b.onclick=function(){dvOpen(pre,r)};el.appendChild(b)});
+      if(!rows.length){el.innerHTML='<div class="dv-none">조건에 맞는 항목이 없습니다.</div>'}
+    }
+    fill($('dv-docs'),it.docs,'d',function(r,p){return '<div><b>'+esc(r.title)+'</b><small>'+esc(r.dt.slice(0,10))+' · '+(r.pages?r.pages.length:1)+'쪽 · '+esc(r.chart?(p?p.name:'(삭제된 환자)'):'환자 미지정')+'</small></div>'});
+    fill($('dv-imgs'),it.imgs,'i',function(r,p){return (r.img?'<img alt="" src="'+r.img+'">':'<img alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=">')+'<div><b>'+esc((r.kind?r.kind+' · ':'')+r.name)+'</b><small>'+esc(r.dt.slice(0,10))+' · '+esc(p?p.name:'')+'</small></div>'});
+    $('dv-nd').textContent='('+it.docs.length+')';$('dv-ni').textContent='('+it.imgs.length+')';
+  }
+  function dvPages(){return DV.kind==='d'?(DV.rec.pages&&DV.rec.pages.length?DV.rec.pages.length:1):1}
+  function dvOpen(pre,rec){
+    DV.kind=pre;DV.rec=rec;DV.key=pre+rec.id;DV.pi=0;DV.arm=null;$('dv-del').textContent='삭제';
+    var a=dvAnn(DV.key,true);a.v=(a.v||0)+1;persistSoon();
+    dvRender();dvLists();
+  }
+  function dvRender(){
+    var has=!!DV.rec;$('dv-empty').hidden=has;$('dv-sizer').hidden=!has;
+    $('dv-pn').textContent=has?((DV.pi+1)+' / '+dvPages()):'(현재 페이지) / (총 페이지)';
+    if(!has)return;
+    var pg=$('dv-page');
+    if(DV.kind==='d'){
+      DV.W=794;DV.H=1123;DV.nat=794;DV.img=null;
+      pg.innerHTML='<div class="dpage dprint">'+dcSan((DV.rec.pages&&DV.rec.pages[DV.pi])||'')+'</div>';
+      Array.prototype.forEach.call(pg.querySelectorAll('[contenteditable]'),function(e){e.removeAttribute('contenteditable')});
+      pg.style.width=DV.W+'px';pg.style.height=DV.H+'px';dvSize();dvDraw();
+    }else if(DV.rec.img){
+      var im=new Image(),key=DV.key;
+      im.onload=function(){if(DV.key!==key)return;DV.nat=im.naturalWidth||794;DV.W=794;DV.H=Math.max(200,Math.round(794*(im.naturalHeight||1)/(im.naturalWidth||1)));DV.img=im;
+        pg.innerHTML='';var e=document.createElement('img');e.className='dv-img';e.alt=DV.rec.name;e.src=DV.rec.img;pg.appendChild(e);pg.style.width=DV.W+'px';pg.style.height=DV.H+'px';dvSize();dvDraw()};
+      im.src=DV.rec.img;
+    }else{
+      DV.W=794;DV.H=500;DV.nat=794;pg.innerHTML='<div class="dv-empty" style="position:static;height:100%">첨부된 이미지가 없습니다.</div>';pg.style.width='794px';pg.style.height='500px';dvSize();dvDraw();
+    }
+  }
+  function dvSize(){
+    var k=DV.zoom/100,cv=$('dv-cv');
+    $('dv-sc').style.width=DV.W+'px';$('dv-sc').style.height=DV.H+'px';$('dv-sc').style.transform='scale('+k+')';
+    $('dv-sizer').style.width=Math.round(DV.W*k)+'px';$('dv-sizer').style.height=Math.round(DV.H*k)+'px';
+    cv.width=DV.W*2;cv.height=DV.H*2;$('dv-zv').textContent=DV.zoom+'%';
+  }
+  function dvStar(c,x,y,w,h){var cx=x+w/2,cy=y+h/2,R=Math.min(Math.abs(w),Math.abs(h))/2,r=R*.42;c.beginPath();for(var i=0;i<10;i++){var rr=i%2?r:R,an=-Math.PI/2+i*Math.PI/5;var px=cx+Math.cos(an)*rr*(w<0?-1:1),py=cy+Math.sin(an)*rr*(h<0?-1:1);i?c.lineTo(px,py):c.moveTo(px,py)}c.closePath()}
+  function dvOne(c,s){
+    c.strokeStyle=s.c;c.fillStyle=s.c;c.lineWidth=s.w;c.lineCap='round';c.lineJoin='round';
+    if(s.t==='pen'){c.beginPath();s.p.forEach(function(q,i){i?c.lineTo(q[0],q[1]):c.moveTo(q[0],q[1])});if(s.p.length===1)c.lineTo(s.p[0][0]+.1,s.p[0][1]);c.stroke();return}
+    var a=s.a,x=a[0],y=a[1],w=a[2]-a[0],h=a[3]-a[1];
+    if(s.t==='rl'){c.beginPath();c.moveTo(a[0],a[1]);c.lineTo(a[2],a[3]);c.stroke();
+      var d=Math.sqrt(w*w+h*h),isDoc=DV.kind==='d',txt=isDoc?(d*210/794).toFixed(1)+' mm':Math.round(d*DV.nat/DV.W)+' px';
+      c.font='bold 16px sans-serif';c.lineWidth=4;c.strokeStyle='#fff';c.strokeText(txt,(a[0]+a[2])/2+6,(a[1]+a[3])/2-6);c.fillStyle=s.c;c.fillText(txt,(a[0]+a[2])/2+6,(a[1]+a[3])/2-6);
+      [[a[0],a[1]],[a[2],a[3]]].forEach(function(q){c.beginPath();c.arc(q[0],q[1],s.w+1.5,0,7);c.fill()});return}
+    c.save();c.globalAlpha=.25;
+    if(s.t==='sq')c.fillRect(x,y,w,h);else if(s.t==='ci'){c.beginPath();c.ellipse(x+w/2,y+h/2,Math.abs(w/2),Math.abs(h/2),0,0,7);c.fill()}else{dvStar(c,x,y,w,h);c.fill()}
+    c.restore();
+    if(s.t==='sq')c.strokeRect(x,y,w,h);else if(s.t==='ci'){c.beginPath();c.ellipse(x+w/2,y+h/2,Math.abs(w/2),Math.abs(h/2),0,0,7);c.stroke()}else{dvStar(c,x,y,w,h);c.stroke()}
+  }
+  function dvDraw(){
+    var cv=$('dv-cv'),c=cv.getContext('2d');c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,cv.width,cv.height);c.scale(2,2);
+    if(!DV.rec)return;dvStrokes(false).forEach(function(s){dvOne(c,s)});if(DV.drag&&DV.drag.s)dvOne(c,DV.drag.s);
+  }
+  function dvXY(e){var r=$('dv-cv').getBoundingClientRect();return [Math.round((e.clientX-r.left)/r.width*DV.W*10)/10,Math.round((e.clientY-r.top)/r.height*DV.H*10)/10]}
+  function dvDist(s,x,y){
+    if(s.t==='pen'){var m=1e9;for(var i=0;i<s.p.length;i++){var a=s.p[i],b=s.p[i+1]||a;m=Math.min(m,dvSeg(x,y,a[0],a[1],b[0],b[1]))}return m}
+    if(s.t==='rl')return dvSeg(x,y,s.a[0],s.a[1],s.a[2],s.a[3]);
+    var x0=Math.min(s.a[0],s.a[2]),x1=Math.max(s.a[0],s.a[2]),y0=Math.min(s.a[1],s.a[3]),y1=Math.max(s.a[1],s.a[3]);
+    return (x>=x0&&x<=x1&&y>=y0&&y<=y1)?0:Math.min(Math.abs(x<x0?x0-x:x-x1),1e9)+Math.min(Math.abs(y<y0?y0-y:y-y1),1e9);
+  }
+  function dvSeg(px,py,ax,ay,bx,by){var dx=bx-ax,dy=by-ay,l=dx*dx+dy*dy,t=l?Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/l)):0;var X=ax+t*dx-px,Y=ay+t*dy-py;return Math.sqrt(X*X+Y*Y)}
+  function dvErase(xy){var l=dvStrokes(false),n=l.length;if(!n)return;var keep=l.filter(function(s){return dvDist(s,xy[0],xy[1])>(s.w/2+8)});if(keep.length!==n){DV.hit=true;var a=dvAnn(DV.key,true);a.p[DV.pi]=keep;dvDraw()}}
+  var cvEl=$('dv-cv');
+  cvEl.addEventListener('pointerdown',function(e){
+    if(!DV.rec||e.button>0)return;e.preventDefault();cvEl.setPointerCapture(e.pointerId);var xy=dvXY(e);
+    if(DV.tool==='er'){DV.drag={er:true};DV.hit=false;dvErase(xy);return}
+    DV.drag={s:DV.tool==='pen'?{t:'pen',c:DV.color,w:DV.w,p:[xy]}:{t:DV.tool,c:DV.color,w:DV.w,a:[xy[0],xy[1],xy[0],xy[1]]}};dvDraw();
+  });
+  cvEl.addEventListener('pointermove',function(e){
+    if(!DV.drag)return;var xy=dvXY(e);
+    if(DV.drag.er){dvErase(xy);return}
+    var s=DV.drag.s;if(s.t==='pen')s.p.push(xy);else{s.a[2]=xy[0];s.a[3]=xy[1]}dvDraw();
+  });
+  function dvUp(){
+    if(!DV.drag)return;var d=DV.drag;DV.drag=null;
+    if(d.er){if(DV.hit)persistSoon();return}
+    var s=d.s;if(s.t!=='pen'&&Math.abs(s.a[2]-s.a[0])<4&&Math.abs(s.a[3]-s.a[1])<4){dvDraw();return}
+    dvStrokes(true).push(s);persistSoon();dvDraw();
+  }
+  cvEl.addEventListener('pointerup',dvUp);cvEl.addEventListener('pointercancel',dvUp);
+  Array.prototype.forEach.call(document.querySelectorAll('.dv-tool'),function(b){b.onclick=function(){DV.tool=b.getAttribute('data-t');Array.prototype.forEach.call(document.querySelectorAll('.dv-tool'),function(x){x.setAttribute('aria-pressed',String(x===b))});cvEl.style.cursor=DV.tool==='er'?'cell':'crosshair'}});
+  Array.prototype.forEach.call(document.querySelectorAll('.dv-cols button'),function(b){b.onclick=function(){DV.color=b.getAttribute('data-c');Array.prototype.forEach.call(document.querySelectorAll('.dv-cols button'),function(x){x.setAttribute('aria-pressed',String(x===b))})}});
+  $('dv-wu').onclick=function(){DV.w=Math.min(20,DV.w+1);$('dv-wv').textContent=DV.w};$('dv-wd').onclick=function(){DV.w=Math.max(1,DV.w-1);$('dv-wv').textContent=DV.w};
+  function dvZoom(z){DV.zoom=Math.max(30,Math.min(300,z));if(DV.rec)dvSize(),dvDraw();else $('dv-zv').textContent=DV.zoom+'%'}
+  $('dv-zi').onclick=function(){dvZoom(DV.zoom+10)};$('dv-zo').onclick=function(){dvZoom(DV.zoom-10)};
+  $('dv-pp').onclick=function(){if(DV.rec&&DV.pi>0){DV.pi--;dvRender()}};$('dv-pnx').onclick=function(){if(DV.rec&&DV.pi<dvPages()-1){DV.pi++;dvRender()}};
+  $('dv-clr').onclick=function(){
+    if(!DV.rec){toast('먼저 문서나 이미지를 선택하세요');return}
+    if(!dvStrokes(false).length){toast('이 쪽에는 지울 표시가 없습니다');return}
+    if(DV.arm!=='clr'){DV.arm='clr';clearTimeout(DV.armT);DV.armT=setTimeout(function(){DV.arm=null},3000);toast('이 쪽의 표시를 모두 지웁니다. 한 번 더 누르세요');return}
+    DV.arm=null;var a=dvAnn(DV.key,true);a.p[DV.pi]=[];persist();dvDraw();toast('표시를 모두 지웠습니다');
+  };
+  ['dv-q','dv-dept','dv-kind','dv-date'].forEach(function(id){$(id).addEventListener(id==='dv-q'?'input':'change',dvLists)});
+  Array.prototype.forEach.call(document.querySelectorAll('input[name=dv-ord],.dv-im'),function(c){c.onchange=dvLists});
+  $('dv-go').onclick=dvLists;$('dv-q').addEventListener('keydown',function(e){if(e.key==='Enter')dvLists()});
+  $('dv-edit').onclick=function(){
+    if(!DV.rec){toast('편집할 문서를 선택하세요');return}
+    if(DV.kind!=='d'){toast('영상검사 이미지는 오른쪽 도구로 표시를 그릴 수 있습니다');return}
+    var r=DV.rec;hideDlg('dlg-dv');if(r.chart&&pt(r.chart))setPatient(r.chart);showMod('doc');dcLoad(r);toast('문서작성 화면에서 편집합니다');
+  };
+  $('dv-del').onclick=function(){
+    if(!DV.rec){toast('삭제할 항목을 선택하세요');return}
+    if(DV.arm!=='del'){DV.arm='del';clearTimeout(DV.armT);DV.armT=setTimeout(function(){DV.arm=null;$('dv-del').textContent='삭제'},3000);$('dv-del').textContent='한 번 더';toast((DV.kind==='d'?'문서':'영상검사 이미지')+'가 삭제됩니다. 한 번 더 누르세요');return}
+    DV.arm=null;$('dv-del').textContent='삭제';var r=DV.rec;
+    if(DV.kind==='d'){S.docs=S.docs.filter(function(d){return d!==r});if(DC.id===r.id&&DC.built)dcNewDoc()}else{S.imaging=S.imaging.filter(function(i){return i!==r});renderErImg()}
+    delete S.dvann[DV.key];persist();DV.rec=null;DV.key='';dvRender();dvLists();if(DC.built)dcList();toast('삭제했습니다');
+  };
+  $('dv-prt').onclick=function(){
+    if(!DV.rec){toast('출력할 항목을 선택하세요');return}
+    var a=document.createElement('div');a.id='print-area';
+    var pgEl=$('dv-page').cloneNode(true);pgEl.removeAttribute('id');pgEl.style.cssText='position:relative;width:'+DV.W+'px;height:'+DV.H+'px;overflow:hidden';
+    var im=document.createElement('img');im.src=$('dv-cv').toDataURL('image/png');im.style.cssText='position:absolute;left:0;top:0;width:100%;height:100%';pgEl.appendChild(im);
+    var wrap=document.createElement('div');wrap.className='dprint';wrap.style.cssText='width:'+DV.W+'px;margin:0 auto';wrap.appendChild(pgEl);a.appendChild(wrap);
+    document.body.appendChild(a);document.body.classList.add('printing');
+    function done(){document.body.classList.remove('printing');if(a.parentNode)a.parentNode.removeChild(a);window.removeEventListener('afterprint',done)}
+    window.addEventListener('afterprint',done);var t0=Date.now();
+    try{window.print()}catch(e){done();toast('이 화면에서는 인쇄가 막혀 있습니다. 내려받은 MediChart.html에서 사용하세요');return}
+    if(Date.now()-t0<150){done();toast('이 화면에서는 인쇄가 막혀 있을 수 있습니다. 내려받은 MediChart.html에서 사용하세요')}
+  };
+  var dvWin=null;
+  function openDV(){
+    var w=null;
+    try{
+      if(dvWin&&!dvWin.closed){dvWin.location.hash='#dv'+(cur?'='+encodeURIComponent(cur.chart):'');dvWin.focus();return}
+      w=window.open(location.href.split('#')[0]+'#dv'+(cur?'='+encodeURIComponent(cur.chart):''),'mc-dv','popup=yes,width=1360,height=860,left=40,top=40,resizable=yes,scrollbars=yes');
+    }catch(e){w=null}
+    if(w){dvWin=w;try{w.focus()}catch(e){}return}
+    toast('브라우저가 팝업을 막아 이 화면 안에서 엽니다. 주소창의 팝업 허용을 켜면 새 창으로 열립니다');
+    openDVIn();
+  }
+  function dvPopShow(){
+    var m=/^#dv=(.+)$/.exec(location.hash);if(m){try{$('dv-q').value=decodeURIComponent(m[1])}catch(e){}$('dv-q').dataset.set='1'}
+    openDVIn();
+  }
+  window.addEventListener('hashchange',function(){if(!DVPOP||document.body.classList.contains('locked'))return;var m=/^#dv=(.+)$/.exec(location.hash);if(m){try{$('dv-q').value=decodeURIComponent(m[1])}catch(e){}dvLists()}try{window.focus()}catch(e){}});
+  /* 다른 창(메인 ↔ 문서뷰어 팝업)에서 저장한 내용을 반영 */
+  window.addEventListener('storage',function(e){
+    if(e.key!=='emr-outpatient-v2'||!e.newValue)return;
+    var o;try{o=JSON.parse(e.newValue)}catch(x){return}if(!o||!o.patients)return;
+    S=o;normS();
+    if(cur)cur=pt(cur.chart)||null;if(curVisit)curVisit=S.visits.filter(function(v){return v.id===curVisit.id})[0]||null;
+    if(DV.key&&DV.rec){var id=+DV.key.slice(1),src=DV.kind==='d'?S.docs:S.imaging;DV.rec=src.filter(function(x){return x.id===id})[0]||DV.rec}
+    try{renderAll()}catch(x){}try{if(!$('dlg-dv').hidden){dvLists()}}catch(x){}
+  });
+  function openDVIn(){
+    var d=$('dv-dept');if(!d.options.length){d.innerHTML='<option value="">진료과 (전체)</option>'+Array.prototype.map.call($('r-dept').options,function(o){return o.value?'<option>'+esc(o.value)+'</option>':''}).join('')}
+    if(cur&&!$('dv-q').dataset.set){$('dv-q').value=cur.chart}
+    $('dv-q').dataset.set='1';
+    showDlg('dlg-dv');dvLists();dvRender();$('dv-q').focus();
+  }
+
   /* 문서 양식 (초안) */
   function dcTpl(k){
     var p=cur,h=S.settings.hospital||{},hn=esc(h.name||'(병원명)'),B='__________',nm=p?esc(p.name):B,bd=p?esc(p.birth):B,sx=p?esc(p.sex):'__',ch=p?esc(p.chart):B;
@@ -1794,7 +1998,7 @@
   function lgDone(id){
     lgSetUser(id);LG.fail=0;try{sessionStorage.setItem('mc-auth',id)}catch(e){}
     var el=$('login');if(el)el.parentNode.removeChild(el);document.body.classList.remove('locked');
-    var w=document.querySelector('.window');if(w)w.inert=false;lgBar();hospGate();
+    var w=document.querySelector('.window');if(w)w.inert=false;lgBar();hospGate();if(DVPOP)dvPopShow();
   }
   function lgBar(){
     var b=$('mn-out');if(!b){b=document.createElement('button');b.type='button';b.id='mn-out';b.className='mn-b mn-out';b.onclick=lgLogout;$('menubar').appendChild(b)}
@@ -1851,7 +2055,7 @@
     fin();
   }
   (function(){var u=null;try{u=sessionStorage.getItem('mc-auth')}catch(e){}
-    if(u&&S.users.some(function(x){return x.id===u})){lgSetUser(u);lgBar();hospGate()}else lgShow();
+    if(u&&S.users.some(function(x){return x.id===u})){lgSetUser(u);lgBar();hospGate();if(DVPOP)dvPopShow()}else lgShow();
     lgSeed()})();
 
   /* 테마 */

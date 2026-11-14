@@ -74,6 +74,7 @@
             <button class="tab" role="tab" aria-selected="false" data-tab="lab" type="button">검사</button>
             <button class="tab" role="tab" aria-selected="false" data-tab="rx" type="button">처방</button>
             <button class="tab" role="tab" aria-selected="false" data-tab="adm" type="button">입원</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="img" type="button">영상검사</button>
           </div>
           <div class="bd" id="tab-note">
             <div style="margin-bottom:4px;color:var(--muted)" id="note-who">접수 현황에서 환자를 선택하세요</div>
@@ -338,6 +339,40 @@
           </div>
     <div class="acts" style="padding:0 10px 10px"><button class="btn" type="button" data-close="dlg-fm">닫기</button><button class="btn blue" id="fm-save" type="button">작 성 (저장)</button></div>
   </div></div></div>
+<div class="ov" id="ov-dv" hidden><div class="dlg xdv" id="dlg-dv" role="dialog" aria-label="문서뷰어" hidden>
+  <div class="dh"><span>문서뷰어</span><button type="button" data-close="dlg-dv" aria-label="닫기">✕</button></div>
+  <div class="dv-wrap">
+    <aside class="dv-l" aria-label="통합검색">
+      <div class="dv-h">통합검색</div>
+      <div class="dv-s">
+        <div class="dv-q"><input id="dv-q" type="search" placeholder="환자명 / 차트번호" aria-label="환자명 또는 차트번호" autocomplete="off"><button type="button" id="dv-go" aria-label="검색"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="M15 15l6 6"/></svg></button></div>
+        <div class="dv-r2"><div class="dv-rad" role="radiogroup" aria-label="정렬"><label><input type="radio" name="dv-ord" value="new" checked>최신순</label><label><input type="radio" name="dv-ord" value="view">조회순</label><label><input type="radio" name="dv-ord" value="old">날짜순</label></div><select id="dv-dept" aria-label="진료과"></select></div>
+        <div class="dv-r2"><select id="dv-kind" aria-label="문서 종류"><option value="">문서 종류 (전체)</option><option value="doc">작성 문서</option><option value="img">영상검사 이미지</option></select><div class="dv-rad dv-ck"><label><input type="checkbox" class="dv-im" value="CT" checked>CT</label><label><input type="checkbox" class="dv-im" value="MRI" checked>MRI</label><label><input type="checkbox" class="dv-im" value="X-Ray" checked>X-ray</label></div></div>
+        <div class="dv-r2"><label class="dv-lb" for="dv-date">작성 및 촬영 날짜:</label><input id="dv-date" type="date"></div>
+      </div>
+      <div class="dv-h2">문서리스트 <span id="dv-nd"></span></div><div class="dv-list" id="dv-docs"></div>
+      <div class="dv-h2">영상검사 이미지 리스트 <span id="dv-ni"></span></div><div class="dv-list" id="dv-imgs"></div>
+      <div class="dv-btns"><button type="button" id="dv-edit">편집</button><button type="button" id="dv-del">삭제</button><button type="button" id="dv-prt">출력</button></div>
+    </aside>
+    <main class="dv-c" id="dv-view" aria-label="문서 보기">
+      <div class="dv-stage" id="dv-stage"><div class="dv-empty" id="dv-empty">왼쪽 목록에서 문서나 영상검사 이미지를 선택하세요.</div><div class="dv-sizer" id="dv-sizer" hidden><div class="dv-sc" id="dv-sc"><div class="dv-page" id="dv-page"></div><canvas id="dv-cv" aria-label="표시 그리기"></canvas></div></div></div>
+    </main>
+    <aside class="dv-t" aria-label="도구">
+      <div class="dv-th">Tool</div>
+      <div class="dv-tb">
+        <button type="button" class="dv-tool" data-t="rl" title="자 (거리 재기)" aria-label="자"><svg viewBox="0 0 48 48" aria-hidden="true"><g transform="rotate(-45 24 24)"><rect x="3" y="15" width="42" height="18" rx="2" fill="#bbb" stroke="#000" stroke-width="3"/><path d="M10 15v7M16 15v5M22 15v7M28 15v5M34 15v7M40 15v5" stroke="#000" stroke-width="2.4"/></g></svg></button>
+        <button type="button" class="dv-tool" data-t="pen" title="펜" aria-label="펜" aria-pressed="true"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 40l3-10L33 8l7 7L18 37z" fill="#000"/><path d="M8 40l3-10 7 7z" fill="#fff" stroke="#000" stroke-width="2.4" stroke-linejoin="round"/></svg></button>
+        <div class="dv-cols" role="radiogroup" aria-label="색"><button type="button" data-c="#000000" style="background:#000" aria-label="검정" aria-pressed="true"></button><button type="button" data-c="#e00000" style="background:#e00000" aria-label="빨강"></button><button type="button" data-c="#ffe000" style="background:#ffe000" aria-label="노랑"></button><button type="button" data-c="#3c8de0" style="background:#3c8de0" aria-label="파랑"></button><button type="button" data-c="#00b050" style="background:#00b050" aria-label="초록"></button></div>
+        <div class="dv-wd"><output id="dv-wv" aria-label="두께">3</output><span class="dv-ud"><button type="button" id="dv-wu" aria-label="두껍게">▲</button><button type="button" id="dv-wd" aria-label="얇게">▼</button></span></div>
+        <div class="dv-sh"><button type="button" class="dv-tool" data-t="st" title="별" aria-label="별"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3 6.9 7.5.7-5.7 5 1.8 7.4L12 18l-6.6 4 1.8-7.4-5.7-5 7.5-.7z" fill="#000"/></svg></button><button type="button" class="dv-tool" data-t="ci" title="원" aria-label="원"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#000"/></svg></button><button type="button" class="dv-tool" data-t="sq" title="사각형" aria-label="사각형"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" fill="#000"/></svg></button></div>
+        <button type="button" class="dv-tool" data-t="er" title="지우개 (눌러서 지울 표시 선택)" aria-label="지우개"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M6 30L26 8l16 14-14 16H14z" fill="#fff" stroke="#000" stroke-width="3" stroke-linejoin="round"/><path d="M14 38h30" stroke="#000" stroke-width="3"/></svg></button>
+        <button type="button" class="dv-trash" id="dv-clr" title="이 쪽의 표시 모두 지우기" aria-label="표시 모두 지우기"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10 12h28M19 12V8h10v4M13 12l2 30h18l2-30M20 18v18M24 18v18M28 18v18" fill="none" stroke="#000" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <div class="dv-zm"><button type="button" id="dv-zi" aria-label="확대">+</button><span id="dv-zv">100%</span><button type="button" id="dv-zo" aria-label="축소">-</button></div>
+      </div>
+      <div class="dv-pg"><button type="button" id="dv-pp" aria-label="이전 쪽">◀</button><span id="dv-pn">(현재 페이지) / (총 페이지)</span><button type="button" id="dv-pnx" aria-label="다음 쪽">▶</button></div>
+    </aside>
+  </div>
+</div></div>
 <div class="ov" id="ov-sk" hidden><div class="dlg xsk blue" id="dlg-sk" role="dialog" aria-label="수술 그림" hidden>
   <div class="dh"><span>수술 그림</span><button type="button" data-close="dlg-sk" aria-label="닫기">✕</button></div>
   <div class="db" style="padding:0">
